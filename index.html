@@ -1,0 +1,2181 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ميزان — دليلك القانوني السعودي</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+
+    :root {
+      --primary: #006C35;
+      --primary-dark: #1B4332;
+      --primary-light: #00A550;
+      --gold: #C9A84C;
+      --gold-light: #E8C97A;
+      --bg: #F5F7F5;
+      --bg2: #FFFFFF;
+      --bg3: #F0F4F0;
+      --text: #1A1A1A;
+      --text-muted: #6B7280;
+      --success: #006C35;
+      --danger: #DC2626;
+      --border: rgba(0,108,53,0.12);
+      --shadow: 0 2px 12px rgba(0,0,0,0.07);
+      --shadow-md: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    html {
+      height: 100%;
+      height: -webkit-fill-available;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: 100dvh;
+      direction: rtl;
+      -webkit-text-size-adjust: 100%;
+      overflow-x: hidden;
+    }
+
+    /* iOS safe area support */
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      .bottom-nav { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+      .chat-input-area { bottom: calc(70px + env(safe-area-inset-bottom)); }
+    }
+
+    /* ===== APP SHELL ===== */
+    #app {
+      max-width: 430px; margin: 0 auto;
+      min-height: 100vh;
+      min-height: 100dvh;
+      position: relative; background: var(--bg); overflow: hidden;
+    }
+
+    /* ===== SCREENS ===== */
+    .screen {
+      display: none; flex-direction: column;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+    .screen.active {
+      display: flex;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    /* ===== SPLASH ===== */
+    #splash {
+      background: linear-gradient(160deg, #006C35 0%, #00A550 50%, #1B4332 100%);
+      justify-content: center; align-items: center; gap: 20px;
+      position: fixed; inset: 0; z-index: 999;
+      min-height: 100vh; min-height: 100dvh;
+    }
+    .splash-logo { text-align: center; }
+    .splash-icon { font-size: 80px; display: block; margin-bottom: 10px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+    .splash-title { font-size: 48px; font-weight: 900; color: #FFFFFF; letter-spacing: 2px; }
+    .splash-sub { font-size: 16px; color: rgba(255,255,255,0.75); margin-top: 8px; }
+    .splash-bar {
+      width: 200px; height: 3px; background: rgba(255,255,255,0.2);
+      border-radius: 10px; overflow: hidden; margin-top: 40px;
+    }
+    .splash-bar-fill {
+      height: 100%; width: 0%; background: #FFFFFF;
+      border-radius: 10px; transition: width 0.1s;
+    }
+
+    /* ===== AUTH ===== */
+    #auth { justify-content: center; padding: 30px 24px; background: #FFFFFF; }
+    .auth-logo { text-align: center; margin-bottom: 40px; }
+    .auth-logo-icon { font-size: 50px; }
+    .auth-logo-title { font-size: 32px; font-weight: 900; color: var(--primary); }
+    .auth-logo-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .auth-tabs { display: flex; background: #F0F4F0; border-radius: 14px; padding: 4px; margin-bottom: 28px; }
+    .auth-tab {
+      flex: 1; padding: 10px; text-align: center; border-radius: 10px;
+      cursor: pointer; font-size: 15px; font-weight: 500; transition: all 0.2s;
+      color: var(--text-muted);
+    }
+    .auth-tab.active { background: var(--primary); color: #fff; font-weight: 700; }
+    .input-group { margin-bottom: 16px; }
+    .input-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+    .input-group input {
+      width: 100%; padding: 14px 16px; background: #FFFFFF;
+      border: 1.5px solid rgba(0,108,53,0.15); border-radius: 12px;
+      color: var(--text); font-size: 16px; font-family: 'Tajawal', sans-serif;
+      outline: none; transition: border 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .input-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,108,53,0.08); }
+    .btn-primary {
+      width: 100%; padding: 15px; background: var(--primary);
+      border: none; border-radius: 14px; color: #fff;
+      font-size: 16px; font-weight: 700; font-family: 'Tajawal', sans-serif;
+      cursor: pointer; margin-top: 8px; transition: all 0.2s;
+      box-shadow: 0 4px 15px rgba(0,108,53,0.3);
+    }
+    .btn-primary:hover { background: var(--primary-dark); box-shadow: 0 6px 20px rgba(0,108,53,0.4); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ===== TOPBAR ===== */
+    .topbar {
+      background: #FFFFFF; padding: 14px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 2px solid var(--primary);
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,108,53,0.08);
+    }
+    .topbar-logo { display: flex; align-items: center; gap: 10px; }
+    .topbar-logo-icon {
+      width: 36px; height: 36px; background: linear-gradient(135deg,#006C35,#00A550);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; box-shadow: 0 3px 10px rgba(0,108,53,0.3);
+    }
+    .topbar-logo-text { font-size: 22px; font-weight: 900; color: var(--primary); }
+    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+    .topbar-btn {
+      background: #F0F9F4; border: 1px solid rgba(0,108,53,0.1);
+      color: var(--primary); font-size: 18px; cursor: pointer;
+      padding: 6px 10px; border-radius: 10px;
+    }
+
+    /* ===== BOTTOM NAV ===== */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px;
+      background: #FFFFFF; border-top: 1px solid rgba(0,108,53,0.1);
+      display: flex; padding: 8px 0 16px; z-index: 100;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      gap: 4px; cursor: pointer; padding: 6px;
+      color: #BBB; font-size: 11px; transition: color 0.2s;
+    }
+    .nav-item.active { color: var(--primary); font-weight: 700; }
+    .nav-item-icon { font-size: 22px; }
+
+    /* ===== HOME ===== */
+    .home-content { flex: 1; padding: 20px; padding-bottom: 90px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .welcome-card {
+      background: linear-gradient(135deg, #006C35 0%, #00A550 100%);
+      border-radius: 22px; padding: 24px; margin-bottom: 24px;
+      position: relative; overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0,108,53,0.3);
+    }
+    .welcome-card::before {
+      content: ''; position: absolute; top: -40px; left: -40px;
+      width: 160px; height: 160px; background: rgba(255,255,255,0.07); border-radius: 50%;
+    }
+    .welcome-card::after {
+      content: ''; position: absolute; bottom: -30px; right: -30px;
+      width: 120px; height: 120px; background: rgba(255,255,255,0.05); border-radius: 50%;
+    }
+    .welcome-greeting { font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 500; position:relative; }
+    .welcome-name { font-size: 22px; font-weight: 800; margin: 4px 0; color:#fff; position:relative; }
+    .welcome-sub { font-size: 13px; color: rgba(255,255,255,0.7); position:relative; }
+    .laweha-counter {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.15); border-radius: 14px;
+      padding: 12px 14px; margin-top: 16px; backdrop-filter: blur(10px);
+      position: relative;
+    }
+    .laweha-counter-text { font-size: 13px; color: rgba(255,255,255,0.8); }
+    .laweha-counter-num { font-size: 18px; font-weight: 700; color: #fff; }
+    .section-title {
+      font-size: 15px; font-weight: 700; color: var(--text);
+      margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+    .card {
+      background: #FFFFFF; border-radius: 18px; padding: 18px;
+      cursor: pointer; transition: all 0.2s; text-align: center;
+      box-shadow: var(--shadow); border: 2px solid transparent;
+    }
+    .card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 6px 25px rgba(0,108,53,0.12); }
+    .card-icon { font-size: 32px; margin-bottom: 8px; }
+    .card-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .card-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .btn-gold {
+      width: 100%; padding: 16px;
+      background: var(--primary);
+      border: none; border-radius: 16px; color: #fff;
+      font-size: 16px; font-weight: 700; font-family: 'Tajawal', sans-serif;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 8px; transition: all 0.2s; margin-bottom: 24px;
+      box-shadow: 0 6px 20px rgba(0,108,53,0.3);
+    }
+    .btn-gold:hover { background: var(--primary-dark); }
+
+    /* ===== REGULATIONS ===== */
+    .regs-content { flex: 1; padding: 16px; padding-bottom: 90px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .search-box {
+      display: flex; align-items: center; gap: 10px;
+      background: #FFFFFF; border: 1.5px solid rgba(0,108,53,0.15);
+      border-radius: 14px; padding: 12px 16px; margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .search-box input {
+      flex: 1; background: none; border: none; color: var(--text);
+      font-size: 15px; font-family: 'Tajawal', sans-serif; outline: none;
+    }
+    .categories { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 20px; padding-bottom: 4px; }
+    .categories::-webkit-scrollbar { display: none; }
+    .cat-btn {
+      padding: 8px 16px; border-radius: 20px; border: 1.5px solid rgba(0,108,53,0.15);
+      background: #FFFFFF; color: var(--text-muted); font-size: 13px;
+      font-family: 'Tajawal', sans-serif; cursor: pointer; white-space: nowrap;
+      transition: all 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .cat-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 700; }
+    .reg-card {
+      background: #FFFFFF; border-radius: 14px; padding: 16px; margin-bottom: 12px;
+      cursor: pointer; transition: all 0.2s; border-right: 4px solid transparent;
+      box-shadow: var(--shadow);
+    }
+    .reg-card:hover { border-right-color: var(--primary); box-shadow: var(--shadow-md); }
+    .reg-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .reg-card-title { font-size: 15px; font-weight: 600; flex: 1; }
+    .reg-card-arrow { color: var(--gold); font-size: 16px; }
+    .reg-card-meta { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+    .reg-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; margin-top: 8px;
+    }
+
+    /* ===== LAWEHA GENERATOR ===== */
+    .laweha-content { flex: 1; padding: 16px; padding-bottom: 90px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .type-card {
+      background: var(--bg3); border: 2px solid var(--border);
+      border-radius: 14px; padding: 14px; cursor: pointer;
+      transition: all 0.2s; text-align: center;
+    }
+    .type-card.selected { border-color: var(--gold); background: rgba(201,168,76,0.1); }
+    .type-card-icon { font-size: 24px; margin-bottom: 6px; }
+    .type-card-title { font-size: 13px; font-weight: 600; }
+    .textarea-field {
+      width: 100%; min-height: 120px; background: #FFFFFF;
+      border: 1.5px solid rgba(0,108,53,0.15); border-radius: 14px;
+      color: var(--text); font-size: 16px; font-family: 'Tajawal', sans-serif;
+      padding: 14px; outline: none; resize: vertical; transition: border 0.2s;
+      line-height: 1.6; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .textarea-field:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,108,53,0.08); }
+    .field-label { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--gold); }
+    .field-hint { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+
+    /* ===== RESULT ===== */
+    .result-card {
+      background: #FFFFFF; border: 1px solid rgba(0,108,53,0.1);
+      border-radius: 16px; padding: 20px; margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    .result-text { font-size: 14px; line-height: 2; white-space: pre-wrap; }
+    .warning-box {
+      background: #FEF9EC; border: 1px solid rgba(201,168,76,0.3);
+      border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .warning-text { font-size: 12px; color: #92400E; line-height: 1.6; }
+    .disclaimer {
+      font-size: 11px; color: var(--text-muted); text-align: center;
+      padding: 12px; border-top: 1px solid rgba(0,108,53,0.08); margin-top: 12px;
+      line-height: 1.6;
+    }
+    .action-btns { display: flex; gap: 10px; }
+    .btn-outline {
+      flex: 1; padding: 12px; background: #FFFFFF;
+      border: 1.5px solid rgba(0,108,53,0.2); border-radius: 12px;
+      color: var(--text); font-size: 14px; font-family: 'Tajawal', sans-serif;
+      cursor: pointer; transition: all 0.2s; display: flex;
+      align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ===== LOADING ===== */
+    .loading-overlay {
+      position: fixed; inset: 0; background: rgba(255,255,255,0.9);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; z-index: 999; gap: 16px;
+    }
+    .loading-spinner {
+      width: 50px; height: 50px; border: 3px solid rgba(0,108,53,0.1);
+      border-top-color: var(--primary); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: var(--primary); font-size: 16px; font-weight: 600; }
+
+    /* ===== PROFILE ===== */
+    .profile-content { flex: 1; padding: 20px; padding-bottom: 90px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .profile-header { text-align: center; padding: 20px 0 30px; }
+    .profile-avatar {
+      width: 80px; height: 80px; background: linear-gradient(135deg, #006C35, #00A550);
+      border: 3px solid #fff; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; margin: 0 auto 12px;
+      box-shadow: 0 4px 15px rgba(0,108,53,0.3);
+    }
+    .profile-name { font-size: 20px; font-weight: 700; }
+    .profile-email { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .plan-card {
+      background: linear-gradient(135deg, #006C35, #00A550);
+      border-radius: 16px; padding: 20px; margin-bottom: 20px;
+      box-shadow: 0 6px 20px rgba(0,108,53,0.3);
+    }
+    .plan-title { font-size: 13px; color: rgba(255,255,255,0.8); margin-bottom: 4px; }
+    .plan-name { font-size: 20px; font-weight: 800; color: #fff; }
+    .plan-desc { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 4px; }
+    .menu-item {
+      background: #FFFFFF; border-radius: 14px; padding: 16px; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 14px; cursor: pointer;
+      transition: all 0.2s; box-shadow: var(--shadow);
+      border: 1px solid rgba(0,108,53,0.06);
+    }
+    .menu-item:hover { box-shadow: var(--shadow-md); border-color: rgba(0,108,53,0.2); }
+    .menu-item-icon { font-size: 22px; }
+    .menu-item-text { flex: 1; font-size: 15px; font-weight: 500; }
+    .menu-item-arrow { color: var(--text-muted); }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 500; padding: 0;
+    }
+    .modal {
+      background: #FFFFFF; border-radius: 24px 24px 0 0;
+      padding: 24px; width: 100%; max-width: 430px;
+      border-top: 3px solid var(--primary); max-height: 85vh; overflow-y: auto;
+      box-shadow: 0 -8px 30px rgba(0,0,0,0.1); -webkit-overflow-scrolling: touch;
+    }
+    .modal-handle {
+      width: 40px; height: 4px; background: #E5E7EB;
+      border-radius: 10px; margin: 0 auto 20px;
+    }
+    .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: var(--primary); }
+    .modal-content { font-size: 14px; line-height: 2; color: var(--text-muted); }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      background: #FFFFFF; border: 1px solid rgba(0,108,53,0.15);
+      border-radius: 12px; padding: 12px 20px; color: var(--text);
+      font-size: 14px; z-index: 1000; transition: opacity 0.3s;
+      max-width: 380px; text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    /* ===== QUIZ ===== */
+    .quiz-content { flex: 1; padding: 16px; padding-bottom: 90px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .quiz-card {
+      background: #FFFFFF; border-radius: 16px; padding: 20px; margin-bottom: 16px;
+      box-shadow: var(--shadow); border: 1px solid rgba(0,108,53,0.06);
+    }
+    .quiz-question { font-size: 15px; font-weight: 700; line-height: 1.6; margin-bottom: 16px; color: var(--text); }
+    .quiz-option {
+      padding: 14px; background: #F9FAFB; border: 1.5px solid rgba(0,108,53,0.1);
+      border-radius: 12px; margin-bottom: 10px; cursor: pointer;
+      font-size: 14px; transition: all 0.2s; color: var(--text);
+    }
+    .quiz-option:hover { border-color: var(--primary); background: #F0F9F4; }
+    .quiz-option.correct { border-color: var(--primary); background: #F0F9F4; color: var(--primary); font-weight: 700; }
+    .quiz-option.wrong { border-color: var(--danger); background: rgba(220,38,38,0.05); color: var(--danger); }
+
+    /* ===== SUBSCRIPTION ===== */
+    .sub-content { flex: 1; padding: 20px; padding-bottom: 100px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .sub-header { text-align: center; padding: 10px 0 24px; }
+    .sub-header-icon { font-size: 50px; margin-bottom: 10px; }
+    .sub-header-title { font-size: 24px; font-weight: 800; color: var(--gold); }
+    .sub-header-sub { font-size: 14px; color: var(--text-muted); margin-top: 6px; line-height: 1.6; }
+    .free-badge {
+      background: #F0F9F4; border: 1px solid rgba(0,108,53,0.2);
+      border-radius: 12px; padding: 14px 16px; margin-bottom: 24px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .free-badge-text { font-size: 14px; color: var(--primary); font-weight: 700; }
+    .free-badge-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .plan-card-sub {
+      border: 2px solid var(--border); border-radius: 20px;
+      padding: 20px; margin-bottom: 14px; cursor: pointer;
+      transition: all 0.2s; position: relative; overflow: hidden;
+    }
+    .plan-card-sub.selected { border-color: var(--gold); background: rgba(201,168,76,0.05); }
+    .plan-card-sub.popular { border-color: var(--gold); }
+    .popular-badge {
+      position: absolute; top: 0; left: 0;
+      background: var(--gold); color: #FFFFFF;
+      font-size: 11px; font-weight: 700;
+      padding: 4px 12px; border-radius: 0 0 12px 0;
+    }
+    .plan-row { display: flex; justify-content: space-between; align-items: center; }
+    .plan-name-sub { font-size: 17px; font-weight: 700; }
+    .plan-price { text-align: left; }
+    .plan-price-num { font-size: 24px; font-weight: 800; color: var(--gold); }
+    .plan-price-period { font-size: 12px; color: var(--text-muted); }
+    .plan-save {
+      display: inline-block; background: rgba(46,204,113,0.15);
+      color: #2ECC71; font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px; margin-top: 8px;
+    }
+    .plan-features { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .plan-feature { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; display: flex; gap: 8px; }
+    .plan-feature-check { color: var(--gold); }
+    .sub-note { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 14px; line-height: 1.6; }
+
+
+    /* ===== AI CHAT ===== */
+    .chat-screen { flex: 1; display: flex; flex-direction: column; padding-bottom: 0; overflow: hidden; }
+    .chat-messages {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+      padding-bottom: 160px; -webkit-overflow-scrolling: touch;
+    }
+    .msg { display: flex; gap: 10px; align-items: flex-end; max-width: 100%; }
+    .msg.user { flex-direction: row-reverse; }
+    .msg-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+      background: var(--bg3); border: 1px solid var(--border);
+    }
+    .msg.user .msg-avatar { background: var(--gold); }
+    .msg-bubble {
+      max-width: 82%; padding: 12px 14px; border-radius: 18px;
+      font-size: 14px; line-height: 1.8;
+      word-wrap: break-word; overflow-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .msg.bot .msg-bubble {
+      background: #FFFFFF; border: 1px solid rgba(0,108,53,0.1);
+      border-bottom-right-radius: 4px; color: var(--text);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .msg.user .msg-bubble {
+      background: linear-gradient(135deg, #006C35, #00A550);
+      border: none; color: #fff;
+      border-bottom-left-radius: 4px; text-align: right;
+    }
+    .msg-time { font-size: 10px; color: var(--text-muted); margin-top: 4px; text-align: center; }
+    .chat-input-area {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px;
+      background: #FFFFFF; border-top: 1px solid rgba(0,108,53,0.1);
+      padding: 10px 12px 10px; display: flex; gap: 8px; align-items: flex-end;
+      z-index: 150;
+      padding-bottom: max(10px, calc(10px + env(safe-area-inset-bottom)));
+    }
+    .chat-input {
+      flex: 1; background: #FFFFFF; border: 1.5px solid rgba(0,108,53,0.15);
+      border-radius: 22px; padding: 10px 16px; color: var(--text);
+      font-size: 14px; font-family: 'Tajawal', sans-serif;
+      outline: none; resize: none; max-height: 100px;
+      line-height: 1.5; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .chat-input:focus { border-color: var(--primary); }
+    .chat-send-btn {
+      width: 42px; height: 42px; background: var(--primary);
+      border: none; border-radius: 50%; cursor: pointer;
+      font-size: 18px; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0; transition: all 0.2s;
+      box-shadow: 0 3px 10px rgba(0,108,53,0.3);
+    }
+    .chat-send-btn:hover { background: var(--primary-dark); }
+    .chat-suggestions {
+      display: flex; gap: 8px; overflow-x: auto; padding: 8px 12px 0;
+      padding-bottom: 4px; flex-shrink: 0;
+    }
+    .chat-suggestions::-webkit-scrollbar { display: none; }
+    .suggestion-btn {
+      padding: 7px 14px; border-radius: 20px;
+      border: 1.5px solid rgba(0,108,53,0.15); background: #FFFFFF;
+      color: var(--text-muted); font-size: 12px;
+      font-family: 'Tajawal', sans-serif; cursor: pointer;
+      white-space: nowrap; transition: all 0.2s; flex-shrink: 0;
+    }
+    .suggestion-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .typing-indicator { display: flex; gap: 4px; padding: 12px 14px; align-items: center; }
+    .typing-dot {
+      width: 7px; height: 7px; background: var(--gold);
+      border-radius: 50%; animation: typingBounce 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
+
+    /* ===== CONSULT ===== */
+    .consult-content { flex: 1; padding: 16px; padding-bottom: 90px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .consult-header { text-align: center; padding: 10px 0 20px; }
+    .consult-header-icon { font-size: 50px; margin-bottom: 10px; }
+    .consult-header-title { font-size: 22px; font-weight: 800; color: var(--gold); }
+    .consult-header-sub { font-size: 13px; color: var(--text-muted); margin-top: 6px; line-height: 1.6; }
+    .consult-counter-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 16px; margin-bottom: 20px;
+    }
+    .consult-areas { margin-bottom: 20px; }
+    .area-chip {
+      display: inline-block; padding: 8px 14px; border-radius: 20px;
+      border: 1px solid var(--border); background: none;
+      color: var(--text-muted); font-size: 12px; font-family: 'Tajawal', sans-serif;
+      cursor: pointer; margin: 4px; transition: all 0.2s;
+    }
+    .area-chip.selected { background: var(--gold); color: #FFFFFF; border-color: var(--gold); font-weight: 700; }
+    .consult-form { }
+    .consult-steps { display: flex; gap: 8px; margin-bottom: 20px; }
+    .step { flex: 1; height: 4px; border-radius: 10px; background: var(--bg3); }
+    .step.active { background: var(--gold); }
+    .consult-card {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px; margin-bottom: 16px;
+    }
+    .consult-card-title { font-size: 15px; font-weight: 700; color: var(--gold); margin-bottom: 12px; }
+    .consult-history-item {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px; margin-bottom: 12px;
+    }
+    .consult-status { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size:11px; font-weight:700; }
+    .status-pending { background: rgba(255,183,0,0.15); color: #FFB700; }
+    .status-done { background: rgba(46,204,113,0.15); color: #2ECC71; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #F5F7F5; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,108,53,0.2); border-radius: 10px; }
+  </style>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ميزان">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#006C35">
+</head>
+<body>
+<div id="app">
+
+  <!-- LOADING -->
+  <div class="loading-overlay" id="loadingOverlay" style="display:none">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loadingText">جارٍ المعالجة...</div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast" style="display:none"></div>
+
+  <!-- SPLASH -->
+  <div class="screen active" id="splash">
+    <div class="splash-logo">
+      <span class="splash-icon">⚖️</span>
+      <div class="splash-title">ميزان</div>
+      <div class="splash-sub">دليلك القانوني السعودي</div>
+      <div class="splash-bar"><div class="splash-bar-fill" id="splashBar"></div></div>
+    </div>
+  </div>
+
+  <!-- AUTH -->
+  <div class="screen" id="auth">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">⚖️</div>
+      <div class="auth-logo-title">ميزان</div>
+      <div class="auth-logo-sub">دليلك القانوني السعودي</div>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchTab('login')">تسجيل الدخول</div>
+      <div class="auth-tab" onclick="switchTab('register')">حساب جديد</div>
+    </div>
+    <div id="loginForm">
+      <div class="input-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="loginEmail" placeholder="example@email.com" dir="ltr">
+      </div>
+      <div class="input-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="loginPass" placeholder="••••••••" dir="ltr">
+      </div>
+      <button class="btn-primary" onclick="login()">دخول</button>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div class="input-group">
+        <label>الاسم الكامل</label>
+        <input type="text" id="regName" placeholder="محمد أحمد">
+      </div>
+      <div class="input-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="regEmail" placeholder="example@email.com" dir="ltr">
+      </div>
+      <div class="input-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="regPass" placeholder="٨ أحرف على الأقل" dir="ltr">
+      </div>
+      <button class="btn-primary" onclick="register()">إنشاء الحساب</button>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="home">
+    <div class="topbar">
+      <div class="topbar-logo">
+        <span class="topbar-logo-icon">⚖️</span>
+        <span class="topbar-logo-text">ميزان</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="topbar-btn" onclick="showToast('🔔 لا توجد إشعارات جديدة')">🔔</button>
+      </div>
+    </div>
+    <div class="home-content">
+      <div class="welcome-card">
+        <div class="welcome-greeting">مرحباً بك 👋</div>
+        <div class="welcome-name" id="welcomeName">المستخدم</div>
+        <div class="welcome-sub">دليلك القانوني السعودي الشامل</div>
+        <div class="laweha-counter">
+          <span style="font-size:20px">🤖</span>
+          <div>
+            <div class="laweha-counter-text">محادثات AI المتبقية</div>
+            <div class="laweha-counter-num"><span id="chatBadge" style="font-size:13px;padding:3px 10px;border-radius:10px;background:rgba(46,204,113,0.2);color:#2ECC71">20 متبقي</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-bottom:20px">
+        <button onclick="goTo('laweha')" style="flex:1;padding:14px 10px;background:var(--primary);border:none;border-radius:14px;color:#FFFFFF;font-size:13px;font-weight:800;font-family:'Tajawal',sans-serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span>📝 لائحة دعوى</span>
+          <span id="lawehaBadge" style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(231,76,60,0.2);color:#ff8080">اشترك</span>
+        </button>
+        <button onclick="goTo('consult')" style="flex:1;padding:14px 10px;background:linear-gradient(135deg,var(--bg3),var(--bg2));border:1px solid var(--border);border-radius:14px;color:var(--gold);font-size:13px;font-weight:800;font-family:'Tajawal',sans-serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span>⚖️ استشارة قانونية</span>
+          <span id="consultBadge" style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(231,76,60,0.2);color:#ff8080">اشترك</span>
+        </button>
+      </div>
+
+      <div class="section-title">⚡ الأقسام الرئيسية</div>
+      <div class="grid-2">
+        <div class="card" onclick="goTo('regulations')">
+          <div class="card-icon">📚</div>
+          <div class="card-title">الأنظمة السعودية</div>
+          <div class="card-sub">جميع الأنظمة والتشريعات</div>
+        </div>
+        <div class="card" onclick="goTo('judiciary')">
+          <div class="card-icon">⚖️</div>
+          <div class="card-title">النظام القضائي</div>
+          <div class="card-sub">المحاكم والإجراءات</div>
+        </div>
+        <div class="card" onclick="goTo('laweha')">
+          <div class="card-icon">📝</div>
+          <div class="card-title">لائحتي</div>
+          <div class="card-sub">إنشاء وحفظ اللوائح</div>
+        </div>
+        <div class="card" onclick="goTo('quiz')">
+          <div class="card-icon">🎓</div>
+          <div class="card-title">اختبارات</div>
+          <div class="card-sub">اختبر معلوماتك القانونية</div>
+        </div>
+        <div class="card" onclick="goTo('police')">
+          <div class="card-icon">🚔</div>
+          <div class="card-title">الشرطة والنيابة</div>
+          <div class="card-sub">حقوقك القانونية كاملة</div>
+        </div>
+        <div class="card" onclick="goTo('family')">
+          <div class="card-icon">👨‍👩‍👧</div>
+          <div class="card-title">الحماية الأسرية</div>
+          <div class="card-sub">حماية الأسرة والطفل</div>
+        </div>
+      </div>
+
+      <div class="section-title">🔥 الأنظمة الأكثر بحثاً</div>
+      <div class="reg-card" onclick="openReg('نظام العمل السعودي')">
+        <div class="reg-card-header">
+          <div class="reg-card-title">نظام العمل السعودي</div>
+          <span class="reg-card-arrow">←</span>
+        </div>
+        <div class="reg-card-meta">آخر تحديث: 1446 هـ</div>
+        <span class="reg-badge" style="background:rgba(201,168,76,0.15);color:var(--gold)">عمالي</span>
+      </div>
+      <div class="reg-card" onclick="openReg('نظام الأحوال الشخصية')">
+        <div class="reg-card-header">
+          <div class="reg-card-title">نظام الأحوال الشخصية</div>
+          <span class="reg-card-arrow">←</span>
+        </div>
+        <div class="reg-card-meta">آخر تحديث: 1443 هـ</div>
+        <span class="reg-badge" style="background:rgba(46,204,113,0.15);color:#2ECC71">أسري</span>
+      </div>
+      <div class="reg-card" onclick="openReg('نظام التجارة الإلكترونية')">
+        <div class="reg-card-header">
+          <div class="reg-card-title">نظام التجارة الإلكترونية</div>
+          <span class="reg-card-arrow">←</span>
+        </div>
+        <div class="reg-card-meta">آخر تحديث: 1440 هـ</div>
+        <span class="reg-badge" style="background:rgba(52,152,219,0.15);color:#3498DB">تجاري</span>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item active" onclick="goBack()"><span class="nav-item-icon">🏠</span>الرئيسية</div>
+      <div class="nav-item" onclick="goTo('regulations')"><span class="nav-item-icon">📚</span>الأنظمة</div>
+      <div class="nav-item" onclick="goTo('laweha')"><span class="nav-item-icon">📝</span>لائحة</div>
+      <div class="nav-item" onclick="goTo('chat')"><span class="nav-item-icon">🤖</span>مساعد</div>
+      <div class="nav-item" onclick="goTo('profile')"><span class="nav-item-icon">👤</span>حسابي</div>
+    </div>
+  </div>
+
+  <!-- REGULATIONS -->
+  <div class="screen" id="regulations">
+    <div class="topbar">
+      <div class="topbar-logo"><span class="topbar-logo-icon">📚</span><span class="topbar-logo-text">الأنظمة</span></div>
+      <button class="topbar-btn" onclick="goBack()">✕</button>
+    </div>
+    <div class="regs-content">
+      <div class="search-box">
+        <span>🔍</span>
+        <input placeholder="ابحث في الأنظمة..." id="searchInput" oninput="filterRegs()">
+      </div>
+      <div class="categories">
+        <button class="cat-btn active" onclick="filterCat(this,'all')">الكل</button>
+        <button class="cat-btn" onclick="filterCat(this,'عمالي')">عمالي</button>
+        <button class="cat-btn" onclick="filterCat(this,'تجاري')">تجاري</button>
+        <button class="cat-btn" onclick="filterCat(this,'أسري')">أسري</button>
+        <button class="cat-btn" onclick="filterCat(this,'جزائي')">جزائي</button>
+        <button class="cat-btn" onclick="filterCat(this,'مدني')">مدني</button>
+        <button class="cat-btn" onclick="filterCat(this,'إداري')">إداري</button>
+      </div>
+      <div id="regsList"></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('home')"><span class="nav-item-icon">🏠</span>الرئيسية</div>
+      <div class="nav-item active" onclick="goTo('regulations')"><span class="nav-item-icon">📚</span>الأنظمة</div>
+      <div class="nav-item" onclick="goTo('laweha')"><span class="nav-item-icon">📝</span>لائحة</div>
+      <div class="nav-item" onclick="goTo('chat')"><span class="nav-item-icon">🤖</span>مساعد</div>
+      <div class="nav-item" onclick="goTo('profile')"><span class="nav-item-icon">👤</span>حسابي</div>
+    </div>
+  </div>
+
+  <!-- LAWEHA GENERATOR -->
+  <div class="screen" id="laweha">
+    <div class="topbar">
+      <div class="topbar-logo"><span class="topbar-logo-icon">📝</span><span class="topbar-logo-text">إنشاء لائحة</span></div>
+      <button class="topbar-btn" onclick="goBack()">✕</button>
+    </div>
+    <div class="laweha-content">
+      <div class="section-title">نوع اللائحة</div>
+      <div class="type-grid">
+        <div class="type-card selected" onclick="selectType(this,'دعوى مدنية')">
+          <div class="type-card-icon">⚖️</div>
+          <div class="type-card-title">دعوى مدنية</div>
+        </div>
+        <div class="type-card" onclick="selectType(this,'دعوى عمالية')">
+          <div class="type-card-icon">👷</div>
+          <div class="type-card-title">دعوى عمالية</div>
+        </div>
+        <div class="type-card" onclick="selectType(this,'دعوى تجارية')">
+          <div class="type-card-icon">🏢</div>
+          <div class="type-card-title">دعوى تجارية</div>
+        </div>
+        <div class="type-card" onclick="selectType(this,'دعوى أحوال شخصية')">
+          <div class="type-card-icon">👨‍👩‍👧</div>
+          <div class="type-card-title">أحوال شخصية</div>
+        </div>
+        <div class="type-card" onclick="selectType(this,'لائحة اعتراض')">
+          <div class="type-card-icon">📋</div>
+          <div class="type-card-title">لائحة اعتراض</div>
+        </div>
+        <div class="type-card" onclick="selectType(this,'لائحة استئناف')">
+          <div class="type-card-icon">🔄</div>
+          <div class="type-card-title">لائحة استئناف</div>
+        </div>
+      </div>
+
+      <div class="field-label">وقائع القضية</div>
+      <div class="field-hint">اشرح ما حدث بكلماتك البسيطة</div>
+      <textarea class="textarea-field" id="factsInput" placeholder="مثال: كنت موظفاً في شركة X لمدة 3 سنوات، وتم فصلي دون سبب مشروع ودون صرف مستحقاتي..."></textarea>
+
+      <div style="height:14px"></div>
+      <div class="field-label">المطلوب من المحكمة</div>
+      <div class="field-hint">ماذا تريد أن تحكم لك المحكمة؟</div>
+      <textarea class="textarea-field" id="requestInput" placeholder="مثال: الحكم بإلزام الشركة بصرف مستحقاتي المالية كاملة وتعويضي عن الفصل التعسفي..."></textarea>
+
+      <div style="height:20px"></div>
+      <button class="btn-gold" onclick="generateLaweha()">
+        ✨ إنشاء اللائحة بالذكاء الاصطناعي
+      </button>
+
+      <div id="lawehaResult" style="display:none">
+        <div class="warning-box">
+          <span>⚠️</span>
+          <div class="warning-text">هذه اللائحة مولّدة بالذكاء الاصطناعي للاسترشاد فقط. يُنصح بعرضها على محامٍ مرخص قبل تقديمها للمحكمة.</div>
+        </div>
+        <div class="result-card">
+          <div class="result-text" id="lawehaText"></div>
+          <div class="disclaimer">⚠️ تم إنشاء هذه اللائحة بواسطة الذكاء الاصطناعي للاسترشاد فقط — قد تحتوي على أخطاء — يُنصح بمراجعة متخصص قانوني قبل تقديمها للمحكمة</div>
+        </div>
+        <div class="action-btns">
+          <button class="btn-outline" onclick="copyLaweha()">📋 نسخ</button>
+          <button class="btn-outline" onclick="shareLaweha()">📤 مشاركة</button>
+          <button class="btn-outline" onclick="newLaweha()">🔄 جديدة</button>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('home')"><span class="nav-item-icon">🏠</span>الرئيسية</div>
+      <div class="nav-item" onclick="goTo('regulations')"><span class="nav-item-icon">📚</span>الأنظمة</div>
+      <div class="nav-item active" onclick="goTo('laweha')"><span class="nav-item-icon">📝</span>لائحة</div>
+      <div class="nav-item" onclick="goTo('chat')"><span class="nav-item-icon">🤖</span>مساعد</div>
+      <div class="nav-item" onclick="goTo('profile')"><span class="nav-item-icon">👤</span>حسابي</div>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div class="screen" id="quiz">
+    <div class="topbar">
+      <div class="topbar-logo"><span class="topbar-logo-icon">🎓</span><span class="topbar-logo-text">اختبارات</span></div>
+      <button class="topbar-btn" onclick="goBack()">✕</button>
+    </div>
+    <div class="quiz-content">
+      <div class="section-title">اختبر معلوماتك القانونية</div>
+      <div id="quizContainer"></div>
+      <button class="btn-gold" onclick="loadQuiz()" style="margin-top:10px">🔄 أسئلة جديدة</button>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('home')"><span class="nav-item-icon">🏠</span>الرئيسية</div>
+      <div class="nav-item" onclick="goTo('regulations')"><span class="nav-item-icon">📚</span>الأنظمة</div>
+      <div class="nav-item" onclick="goTo('laweha')"><span class="nav-item-icon">📝</span>لائحة</div>
+      <div class="nav-item active" onclick="goTo('quiz')"><span class="nav-item-icon">🎓</span>اختبارات</div>
+      <div class="nav-item" onclick="goTo('profile')"><span class="nav-item-icon">👤</span>حسابي</div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="screen" id="profile">
+    <div class="topbar">
+      <div class="topbar-logo"><span class="topbar-logo-icon">👤</span><span class="topbar-logo-text">حسابي</span></div>
+    </div>
+    <div class="profile-content">
+      <div class="profile-header">
+        <div class="profile-avatar">👤</div>
+        <div class="profile-name" id="profileName">المستخدم</div>
+        <div class="profile-email" id="profileEmail"></div>
+      </div>
+      <div class="plan-card">
+        <div class="plan-title">خطتك الحالية</div>
+        <div class="plan-name" id="planName">مجاني</div>
+        <div class="plan-desc" id="planDesc">تحميل مجاني — 20 محادثة AI مجانية</div>
+      </div>
+      <button class="btn-gold" onclick="showUpgrade()">⭐ ترقية للاشتراك المميز</button>
+      <div class="menu-item" onclick="showToast('قريباً...')">
+        <span class="menu-item-icon">📜</span>
+        <span class="menu-item-text">لوائحي المحفوظة</span>
+        <span class="menu-item-arrow">←</span>
+      </div>
+      <div class="menu-item" onclick="showToast('قريباً...')">
+        <span class="menu-item-icon">🔔</span>
+        <span class="menu-item-text">الإشعارات</span>
+        <span class="menu-item-arrow">←</span>
+      </div>
+      <div class="menu-item" onclick="showToast('قريباً...')">
+        <span class="menu-item-icon">🔒</span>
+        <span class="menu-item-text">الخصوصية والأمان</span>
+        <span class="menu-item-arrow">←</span>
+      </div>
+      <div class="menu-item" onclick="logout()">
+        <span class="menu-item-icon">🚪</span>
+        <span class="menu-item-text" style="color:#E74C3C">تسجيل الخروج</span>
+        <span class="menu-item-arrow">←</span>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('home')"><span class="nav-item-icon">🏠</span>الرئيسية</div>
+      <div class="nav-item" onclick="goTo('regulations')"><span class="nav-item-icon">📚</span>الأنظمة</div>
+      <div class="nav-item" onclick="goTo('laweha')"><span class="nav-item-icon">📝</span>لائحة</div>
+      <div class="nav-item" onclick="goTo('quiz')"><span class="nav-item-icon">🎓</span>اختبارات</div>
+      <div class="nav-item active" onclick="goTo('profile')"><span class="nav-item-icon">👤</span>حسابي</div>
+    </div>
+  </div>
+
+  <!-- JUDICIARY INFO -->
+  <div class="screen" id="judiciary">
+    <div class="topbar">
+      <div class="topbar-logo"><span class="topbar-logo-icon">⚖️</span><span class="topbar-logo-text">النظام القضائي</span></div>
+      <button class="topbar-btn" onclick="goBack()">✕</button>
+    </div>
+    <div class="regs-content">
+      <div class="reg-card" onclick="openModal('المحكمة الابتدائية','أول درجات التقاضي. تختص بالنظر في القضايا لأول مرة. يحق للمتضرر الاعتراض على حكمها أمام محكمة الاستئناف خلال 30 يوماً من صدور الحكم.')">
+        <div class="reg-card-header"><div class="reg-card-title">🏛️ المحكمة الابتدائية</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">الدرجة الأولى من التقاضي</div>
+      </div>
+      <div class="reg-card" onclick="openModal('محكمة الاستئناف','الدرجة الثانية من التقاضي. تنظر في الطعون المقدمة على أحكام المحاكم الابتدائية. يجب تقديم لائحة الاعتراض خلال المدة النظامية.')">
+        <div class="reg-card-header"><div class="reg-card-title">🏛️ محكمة الاستئناف</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">الدرجة الثانية من التقاضي</div>
+      </div>
+      <div class="reg-card" onclick="openModal('المحكمة العليا','أعلى درجات التقاضي في المملكة. تختص بمراجعة الأحكام من الناحية الشرعية والنظامية. لا تعيد النظر في الوقائع بل تراجع صحة تطبيق النظام.')">
+        <div class="reg-card-header"><div class="reg-card-title">🏛️ المحكمة العليا</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">أعلى درجات التقاضي</div>
+      </div>
+      <div class="reg-card" onclick="openModal('المحكمة العمالية','تختص بالنظر في النزاعات بين العمال وأصحاب العمل. تشمل قضايا الفصل التعسفي، مستحقات نهاية الخدمة، الإصابات المهنية، والخلافات التعاقدية.')">
+        <div class="reg-card-header"><div class="reg-card-title">👷 المحكمة العمالية</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">نزاعات العمل والعمال</div>
+      </div>
+      <div class="reg-card" onclick="openModal('المحكمة التجارية','تختص بالنظر في النزاعات التجارية بين الشركات والأفراد. تشمل عقود التجارة، الشركات، الإفلاس، والنزاعات المالية التجارية.')">
+        <div class="reg-card-header"><div class="reg-card-title">🏢 المحكمة التجارية</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">النزاعات التجارية</div>
+      </div>
+      <div class="reg-card" onclick="openModal('محاكم الأحوال الشخصية','تختص بقضايا الزواج والطلاق والنفقة والحضانة وإثبات النسب والميراث وما يتعلق بشؤون الأسرة.')">
+        <div class="reg-card-header"><div class="reg-card-title">👨‍👩‍👧 محاكم الأحوال الشخصية</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">شؤون الأسرة والميراث</div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('home')"><span class="nav-item-icon">🏠</span>الرئيسية</div>
+      <div class="nav-item" onclick="goTo('regulations')"><span class="nav-item-icon">📚</span>الأنظمة</div>
+      <div class="nav-item" onclick="goTo('laweha')"><span class="nav-item-icon">📝</span>لائحة</div>
+      <div class="nav-item" onclick="goTo('chat')"><span class="nav-item-icon">🤖</span>مساعد</div>
+      <div class="nav-item" onclick="goTo('profile')"><span class="nav-item-icon">👤</span>حسابي</div>
+    </div>
+  </div>
+
+  <!-- SUBSCRIPTION -->
+  <div class="screen" id="subscription">
+    <div class="topbar">
+      <div class="topbar-logo"><span class="topbar-logo-icon">⭐</span><span class="topbar-logo-text">الاشتراك المميز</span></div>
+      <button class="topbar-btn" onclick="goTo('profile')">✕</button>
+    </div>
+    <div class="sub-content">
+      <div class="sub-header">
+        <div class="sub-header-icon">⚖️</div>
+        <div class="sub-header-title">ميزان المميز</div>
+        <div class="sub-header-sub">لوائح غير محدودة + جميع المميزات بدون قيود</div>
+      </div>
+      <div class="free-badge">
+        <span style="font-size:24px">✅</span>
+        <div>
+          <div class="free-badge-text">مجاناً بعد التحميل</div>
+          <div class="free-badge-sub">20 محادثة AI عند التسجيل + تصفح الأنظمة</div>
+        </div>
+      </div>
+      <div class="section-title">اختر خطتك</div>
+      <div class="plan-card-sub" id="plan-monthly" onclick="selectPlan('monthly')">
+        <div class="plan-row">
+          <div class="plan-name-sub">شهري</div>
+          <div class="plan-price">
+            <div class="plan-price-num">49 <span style="font-size:14px">ر.س</span></div>
+            <div class="plan-price-period">3 لوائح + 3 استشارات + AI ∞</div>
+          </div>
+        </div>
+        <div class="plan-features">
+          <div class="plan-feature"><span class="plan-feature-check">✦</span>3 لوائح دعوى</div>
+          <div class="plan-feature"><span class="plan-feature-check">✦</span>3 استشارات قانونية</div>
+          <div class="plan-feature"><span class="plan-feature-check">✦</span>محادثات AI غير محدودة</div>
+          <div class="plan-feature"><span class="plan-feature-check">✦</span>تصفح كامل للأنظمة</div>
+        </div>
+      </div>
+      <div class="plan-card-sub popular selected" id="plan-3months" onclick="selectPlan('3months')">
+        <div class="popular-badge">⭐ الأكثر شيوعاً</div>
+        <div class="plan-row" style="margin-top:14px">
+          <div class="plan-name-sub">3 أشهر</div>
+          <div class="plan-price">
+            <div class="plan-price-num">180 <span style="font-size:14px">ر.س</span></div>
+            <div class="plan-price-period">8 لوائح + 8 استشارات + AI ∞</div>
+          </div>
+        </div>
+        <span class="plan-save">قيمة أفضل — 60 ريال شهرياً</span>
+        <div class="plan-features">
+          <div class="plan-feature"><span class="plan-feature-check">✦</span>8 لوائح دعوى</div>
+          <div class="plan-feature"><span class="plan-feature-check">✦</span>8 استشارات قانونية</div>
+          <div class="plan-feature"><span class="plan-feature-check">✦</span>محادثات AI غير محدودة</div>
+          <div class="plan-feature"><span class="plan-feature-check">✦</span>تصفح كامل للأنظمة</div>
+        </div>
+      </div>
+
+      <button class="btn-gold" onclick="subscribePlan()" style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <span>اشترك الآن ✨</span>
+        <span style="font-size:11px;opacity:0.7">🍎 App Store &nbsp;|&nbsp; ▶️ Google Play</span>
+      </button>
+      <div class="sub-note">
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:10px">
+          <span style="font-size:28px">🍎</span>
+          <span style="font-size:13px;color:var(--text-muted)">+</span>
+          <span style="font-size:28px">▶️</span>
+        </div>
+        الدفع حصراً عبر Apple App Store أو Google Play.<br>
+        يتجدد تلقائياً — الإلغاء من إعدادات جوالك في أي وقت.<br>
+        <span style="color:rgba(201,168,76,0.6);font-size:10px">لا يتم جمع بيانات بطاقتك — الدفع يتم عبر الستور مباشرة</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI CHAT -->
+  <div class="screen" id="chat">
+    <div class="topbar">
+      <div class="topbar-logo">
+        <span class="topbar-logo-icon">🤖</span>
+        <span class="topbar-logo-text">مساعد ميزان</span>
+      </div>
+      <button class="topbar-btn" onclick="goBack()">✕</button>
+    </div>
+    <div class="chat-screen">
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-area">
+        <div style="flex:1">
+          <div class="chat-suggestions" id="chatSuggestions">
+            <button class="suggestion-btn" onclick="sendSuggestion('ما هي خطط الاشتراك؟')">خطط الاشتراك</button>
+            <button class="suggestion-btn" onclick="sendSuggestion('كيف أنشئ لائحة دعوى؟')">إنشاء لائحة</button>
+            <button class="suggestion-btn" onclick="sendSuggestion('ما هي حقوقي كموظف؟')">حقوق الموظف</button>
+            <button class="suggestion-btn" onclick="sendSuggestion('كيف أرفع دعوى عمالية؟')">دعوى عمالية</button>
+            <button class="suggestion-btn" onclick="sendSuggestion('ما هي درجات التقاضي؟')">درجات التقاضي</button>
+          </div>
+          <div style="display:flex;gap:8px;padding:8px 0 0">
+            <textarea class="chat-input" id="chatInput" placeholder="اسألني عن أي نظام أو إجراء قانوني..." rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"
+              oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+            <button class="chat-send-btn" onclick="sendChat()">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('home')"><span class="nav-item-icon">🏠</span>الرئيسية</div>
+      <div class="nav-item" onclick="goTo('regulations')"><span class="nav-item-icon">📚</span>الأنظمة</div>
+      <div class="nav-item" onclick="goTo('laweha')"><span class="nav-item-icon">📝</span>لائحة</div>
+      <div class="nav-item active" onclick="goTo('chat')"><span class="nav-item-icon">🤖</span>مساعد</div>
+      <div class="nav-item" onclick="goTo('profile')"><span class="nav-item-icon">👤</span>حسابي</div>
+    </div>
+  </div>
+
+  <!-- POLICE & PROSECUTION -->
+  <div class="screen" id="police">
+    <div class="topbar">
+      <div class="topbar-logo"><span class="topbar-logo-icon">🚔</span><span class="topbar-logo-text">الشرطة والنيابة</span></div>
+      <button class="topbar-btn" onclick="goBack()">✕</button>
+    </div>
+    <div class="regs-content">
+
+      <div class="warning-box" style="margin-bottom:16px">
+        <span>⚠️</span>
+        <div class="warning-text">هذا القسم للتوعية بحقوقك القانونية فقط — استشر محامياً في أي موقف قانوني</div>
+      </div>
+
+      <div class="section-title">🚔 حقوقك في مركز الشرطة</div>
+
+      <div class="reg-card" onclick="openModal('حقوقك عند القبض عليك','بموجب المادة 22 من اللائحة التنفيذية لنظام الإجراءات الجزائية، لك الحق في:\n\n1. معرفة سبب القبض أو التوقيف فوراً\n2. الاستعانة بمحامٍ أو وكيل\n3. إبلاغ أحد أفراد عائلتك (زوجة، أب، أم، أبناء)\n4. عدم التوقيف أكثر من 24 ساعة بدون أمر كتابي من المحقق\n5. الحصول على نسخة من محضر القبض\n6. التوقيع على إقرار باطلاعك على حقوقك\n\n⚠️ للاسترشاد فقط — استشر محامياً')">
+        <div class="reg-card-header"><div class="reg-card-title">⚖️ حقوقك عند القبض عليك</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">المادة 22 — اللائحة التنفيذية لنظام الإجراءات الجزائية</div>
+        <span class="reg-badge" style="background:rgba(231,76,60,0.15);color:#E74C3C">مهم جداً</span>
+      </div>
+
+      <div class="reg-card" onclick="openModal('حق الصمت','لك الحق الكامل في الصمت وعدم الإجابة على أسئلة المحقق.\n\nالصمت لا يُعتبر قرينة ضدك أمام القضاء.\n\nأي اعتراف منتزع تحت الإكراه أو التهديد أو الضغط النفسي — باطل قانوناً ولا يُعتد به.\n\nالأساس القانوني:\nنظام مكافحة جرائم التعذيب (1438هـ)\nنظام الإجراءات الجزائية (1422هـ)\n\n⚠️ للاسترشاد فقط — استشر محامياً')">
+        <div class="reg-card-header"><div class="reg-card-title">🤐 حق الصمت</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">نظام الإجراءات الجزائية — نظام مكافحة التعذيب</div>
+        <span class="reg-badge" style="background:rgba(201,168,76,0.15);color:var(--gold)">حق أساسي</span>
+      </div>
+
+      <div class="reg-card" onclick="openModal('مدة التوقيف القانونية','الحد الأقصى للتوقيف:\n\n• بدون أمر كتابي: 24 ساعة فقط\n• بأمر المحقق: يمكن التمديد\n• أقصى مدة تحقيق ابتدائي: 5 أيام\n• التمديد الإضافي: يحتاج إذن النيابة العامة\n\nإذا مضت 24 ساعة بدون أمر كتابي — توقيفك مخالف للنظام\n\nيمكن لذويك تقديم شكوى عبر منصة أبشر لدائرة الرقابة على السجون\n\n⚠️ للاسترشاد فقط — استشر محامياً')">
+        <div class="reg-card-header"><div class="reg-card-title">⏱️ مدة التوقيف القانونية</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">المادة 40 — نظام الإجراءات الجزائية</div>
+        <span class="reg-badge" style="background:rgba(46,204,113,0.15);color:#2ECC71">معلومة مهمة</span>
+      </div>
+
+      <div class="section-title" style="margin-top:8px">🏛️ النيابة العامة</div>
+
+      <div class="reg-card" onclick="openModal('صلاحيات النيابة العامة','النيابة العامة (هيئة التحقيق والادعاء العام) تختص بـ:\n\n1. الإشراف على رجال الضبط الجنائي (الشرطة)\n2. الإذن بالتوقيف الممتد\n3. زيارة السجون والتأكد من مشروعية التوقيف\n4. التحقيق في الشكاوى ضد رجال الأمن\n5. الإفراج عن أي موقوف بصورة غير مشروعة\n\nيمكن إبلاغ النيابة عبر أبشر عن أي موقوف لم يحصل على حقوقه\n\n⚠️ للاسترشاد فقط — استشر محامياً')">
+        <div class="reg-card-header"><div class="reg-card-title">🏛️ صلاحيات النيابة العامة</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">نظام هيئة التحقيق والادعاء العام (1409هـ)</div>
+        <span class="reg-badge" style="background:rgba(52,152,219,0.15);color:#3498DB">إداري</span>
+      </div>
+
+      <div class="reg-card" onclick="openModal('كيف تتقدم بشكوى ضد الشرطة','إذا انتُهكت حقوقك في مركز الشرطة:\n\n1. عبر منصة أبشر:\n   - افتح أبشر → خدمات → تقديم شكوى\n   - اختر: شكوى على موقوف\n\n2. عبر ديوان المظالم:\n   - للشكاوى الإدارية ضد الجهات الحكومية\n\n3. عبر النيابة العامة مباشرة:\n   - التوجه لأقرب فرع للنيابة\n\n4. عبر محامٍ:\n   - تقديم شكوى رسمية موثقة\n\n⚠️ وثّق كل شيء بالتاريخ والوقت والشهود')">
+        <div class="reg-card-header"><div class="reg-card-title">📋 كيف تتقدم بشكوى</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">إجراءات الشكاوى الرسمية</div>
+        <span class="reg-badge" style="background:rgba(201,168,76,0.15);color:var(--gold)">إجراءات</span>
+      </div>
+
+      <div class="reg-card" onclick="openModal('التفتيش المنزلي — ما هو قانوني؟','يجوز تفتيش المسكن فقط بـ:\n\n1. أمر كتابي من النيابة العامة\n2. يتضمن: اسم المحقق وتوقيعه ووظيفته\n3. يحدد: ما يراد تفتيشه\n4. مدة التنفيذ: لا تتجاوز 7 أيام\n\nما يحق لك عند التفتيش:\n• طلب مطالعة أمر التفتيش\n• التأكد من هوية المنفذين\n• التوقيع على محضر التفتيش\n• الاحتفاظ بنسخة من المحضر\n\n⚠️ للاسترشاد فقط — استشر محامياً')">
+        <div class="reg-card-header"><div class="reg-card-title">🏠 التفتيش المنزلي</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">اللائحة التنفيذية لنظام الإجراءات الجزائية (1435هـ)</div>
+        <span class="reg-badge" style="background:rgba(231,76,60,0.15);color:#E74C3C">حقوق أساسية</span>
+      </div>
+
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('home')"><span class="nav-item-icon">🏠</span>الرئيسية</div>
+      <div class="nav-item" onclick="goTo('regulations')"><span class="nav-item-icon">📚</span>الأنظمة</div>
+      <div class="nav-item" onclick="goTo('laweha')"><span class="nav-item-icon">📝</span>لائحة</div>
+      <div class="nav-item" onclick="goTo('chat')"><span class="nav-item-icon">🤖</span>مساعد</div>
+      <div class="nav-item" onclick="goTo('profile')"><span class="nav-item-icon">👤</span>حسابي</div>
+    </div>
+  </div>
+
+  <!-- FAMILY PROTECTION -->
+  <div class="screen" id="family">
+    <div class="topbar">
+      <div class="topbar-logo"><span class="topbar-logo-icon">👨‍👩‍👧</span><span class="topbar-logo-text">الحماية الأسرية</span></div>
+      <button class="topbar-btn" onclick="goBack()">✕</button>
+    </div>
+    <div class="regs-content">
+
+      <div class="warning-box" style="margin-bottom:16px">
+        <span>⚠️</span>
+        <div class="warning-text">إذا كنت في خطر فوري اتصل بـ 911 — هذا القسم للتوعية بحقوقك القانونية</div>
+      </div>
+
+      <div class="section-title">🛡️ أنظمة الحماية الأسرية</div>
+
+      <div class="reg-card" onclick="openModal('نظام الحماية من الإيذاء (1434هـ)','صدر بالمرسوم الملكي رقم م/52 بتاريخ 15/11/1434هـ\n\nيحمي من جميع أشكال الإيذاء:\n• الجسدي: الضرب والإيذاء الجسدي\n• النفسي: التهديد والإهانة والتخويف\n• اللفظي: الشتم والإهانة المتكررة\n• المالي: الاستيلاء على الأموال والحرمان من النفقة\n• الجنسي: أي اعتداء جنسي\n\nمن يحميهم النظام:\nالزوجة، الأطفال، الوالدان، كبار السن، ذوو الإعاقة\n\nللإبلاغ:\n• وزارة الموارد البشرية\n• أقرب مركز شرطة\n• منصة أبشر\n\n⚠️ للاسترشاد فقط — استشر محامياً')">
+        <div class="reg-card-header"><div class="reg-card-title">🛡️ نظام الحماية من الإيذاء</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">المرسوم الملكي م/52 — 1434هـ</div>
+        <span class="reg-badge" style="background:rgba(231,76,60,0.15);color:#E74C3C">أساسي</span>
+      </div>
+
+      <div class="reg-card" onclick="openModal('نظام حماية الطفل (1436هـ)','صدر بالمرسوم الملكي م/41 — عُدِّل 1443هـ\n\nيحمي الطفل من:\n• الإيذاء الجسدي والنفسي والجنسي\n• الإهمال المتعمد\n• الاستغلال في أعمال غير مشروعة\n• الحرمان من التعليم والرعاية\n\nالعقوبات:\n• سجن حتى سنة + غرامة حتى 50,000 ريال\n• أو إحدى العقوبتين\n• تتضاعف عند التكرار\n• تتضاعف إذا كان المعتدي من المسؤولين عن الرعاية\n\nللإبلاغ:\n• خط مساندة الطفل: 1919\n• وزارة الموارد البشرية\n\n⚠️ للاسترشاد فقط — استشر محامياً')">
+        <div class="reg-card-header"><div class="reg-card-title">👶 نظام حماية الطفل</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">المرسوم الملكي م/41 — 1436هـ (معدّل 1443هـ)</div>
+        <span class="reg-badge" style="background:rgba(201,168,76,0.15);color:var(--gold)">حماية الطفل</span>
+      </div>
+
+      <div class="reg-card" onclick="openModal('حقوق المرأة في الحماية الأسرية','بموجب نظام الحماية من الإيذاء ونظام الأحوال الشخصية:\n\nحقوق المرأة:\n1. الحماية من العنف الجسدي والنفسي والمالي\n2. الحق في طلب الإيواء في دور الحماية\n3. طلب الطلاق قضائياً عند الضرر\n4. المطالبة بالنفقة ومتأخراتها\n5. استرداد المهر عند الخلع\n6. حضانة الأطفال وفق الأحكام الشرعية\n\nدور الحماية:\nتوفر الإيواء المؤقت + الرعاية النفسية + المساعدة القانونية\n\nللإبلاغ:\n• البرنامج الوطني للأمان الأسري: 1919\n• وزارة الموارد البشرية\n• أقرب مركز شرطة\n\n⚠️ للاسترشاد فقط — استشر محامياً')">
+        <div class="reg-card-header"><div class="reg-card-title">👩 حقوق المرأة في الحماية الأسرية</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">نظام الحماية من الإيذاء + نظام الأحوال الشخصية</div>
+        <span class="reg-badge" style="background:rgba(52,152,219,0.15);color:#3498DB">حقوق المرأة</span>
+      </div>
+
+      <div class="section-title" style="margin-top:8px">📞 أرقام الطوارئ الأسرية</div>
+
+      <div class="reg-card" onclick="openModal('أرقام الطوارئ والإبلاغ','أرقام الإبلاغ عن العنف الأسري:\n\n🆘 911 — الطوارئ العامة (خطر فوري)\n\n👶 1919 — خط مساندة الطفل\nللإبلاغ عن إيذاء الأطفال\n\n👨‍👩‍👧 1910 — البرنامج الوطني للأمان الأسري\nللعنف الأسري وحماية الأسرة\n\n📱 أبشر — لتقديم البلاغات إلكترونياً\n\n🏛️ وزارة الموارد البشرية\nلطلب الإيواء والخدمات الاجتماعية\n\n⚖️ جمعية حماية الأسرة\nاستشارات قانونية وأسرية سرية')">
+        <div class="reg-card-header"><div class="reg-card-title">📞 أرقام الطوارئ والإبلاغ</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">جهات الإبلاغ الرسمية</div>
+        <span class="reg-badge" style="background:rgba(46,204,113,0.15);color:#2ECC71">طوارئ</span>
+      </div>
+
+      <div class="reg-card" onclick="openModal('عقوبات العنف الأسري','وفق نظام الحماية من الإيذاء:\n\nالعقوبة الأساسية:\n• السجن + الغرامة المالية\n• أو إحدى العقوبتين\n• يحددها القاضي حسب خطورة الفعل\n\nحالات تضاعف العقوبة:\n• التكرار\n• إذا كان المعتدي من مسؤولي الرعاية\n• إذا أدى الإيذاء لإصابة جسدية\n• إذا كان الضحية طفلاً أو ذا إعاقة\n\nإجراءات الحماية الفورية:\n• نقل الضحية لمكان آمن\n• الإيواء في دور الحماية\n• أمر قضائي بمنع الاقتراب\n\n⚠️ للاسترشاد فقط — استشر محامياً')">
+        <div class="reg-card-header"><div class="reg-card-title">⚖️ عقوبات العنف الأسري</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">نظام الحماية من الإيذاء — العقوبات والإجراءات</div>
+        <span class="reg-badge" style="background:rgba(231,76,60,0.15);color:#E74C3C">عقوبات</span>
+      </div>
+
+      <div class="reg-card" onclick="openModal('كيف تتقدم بشكوى عنف أسري','الخطوات النظامية للإبلاغ:\n\n1. الإبلاغ الفوري:\n   • اتصل بـ 911 إذا كان الخطر فورياً\n   • أو اتصل بـ 1919 لحالات الأطفال\n   • أو توجه لأقرب مركز شرطة\n\n2. التوثيق مهم:\n   • صوّر أي آثار للإيذاء\n   • احتفظ برسائل التهديد\n   • اطلب تقريراً طبياً من المستشفى\n\n3. طلب الإيواء:\n   • إذا كنت في خطر اطلب الإيواء فوراً\n   • وزارة الموارد البشرية توفره مجاناً\n\n4. التقاضي:\n   • توكيل محامٍ\n   • رفع دعوى أمام المحكمة المختصة\n\n⚠️ للاسترشاد فقط — استشر محامياً')">
+        <div class="reg-card-header"><div class="reg-card-title">📋 كيف تتقدم بشكوى</div><span class="reg-card-arrow">←</span></div>
+        <div class="reg-card-meta">خطوات الإبلاغ والتقاضي</div>
+        <span class="reg-badge" style="background:rgba(201,168,76,0.15);color:var(--gold)">إجراءات</span>
+      </div>
+
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('home')"><span class="nav-item-icon">🏠</span>الرئيسية</div>
+      <div class="nav-item" onclick="goTo('regulations')"><span class="nav-item-icon">📚</span>الأنظمة</div>
+      <div class="nav-item" onclick="goTo('laweha')"><span class="nav-item-icon">📝</span>لائحة</div>
+      <div class="nav-item" onclick="goTo('chat')"><span class="nav-item-icon">🤖</span>مساعد</div>
+      <div class="nav-item" onclick="goTo('profile')"><span class="nav-item-icon">👤</span>حسابي</div>
+    </div>
+  </div>
+
+  <!-- CONSULT -->
+  <div class="screen" id="consult">
+    <div class="topbar">
+      <div class="topbar-logo"><span class="topbar-logo-icon">⚖️</span><span class="topbar-logo-text">استشارة قانونية</span></div>
+      <button class="topbar-btn" onclick="goBack()">✕</button>
+    </div>
+    <div class="consult-content">
+
+      <div class="consult-header">
+        <div class="consult-header-icon">⚖️</div>
+        <div class="consult-header-title">استشارة قانونية</div>
+        <div class="consult-header-sub">اطرح سؤالك القانوني وسيجيب عليه مساعد ميزان الذكي<br>الإجابة عليه بدقة وموثوقية</div>
+      </div>
+
+      <div class="consult-counter-bar">
+        <div>
+          <div style="font-size:12px;color:var(--text-muted)">استشاراتك المتبقية</div>
+          <div id="consultCountDisplay" style="font-size:18px;font-weight:800;color:var(--gold);margin-top:4px">اشترك للبدء</div>
+        </div>
+        <button onclick="showUpgrade()" style="background:var(--primary);border:none;border-radius:10px;padding:8px 14px;color:#FFFFFF;font-size:12px;font-weight:700;font-family:'Tajawal',sans-serif;cursor:pointer">ترقية ⭐</button>
+      </div>
+
+      <div class="section-title">مجال الاستشارة</div>
+      <div class="consult-areas">
+        <button class="area-chip selected" onclick="selectArea(this)">عمالي</button>
+        <button class="area-chip" onclick="selectArea(this)">تجاري</button>
+        <button class="area-chip" onclick="selectArea(this)">أسري</button>
+        <button class="area-chip" onclick="selectArea(this)">جزائي</button>
+        <button class="area-chip" onclick="selectArea(this)">عقاري</button>
+        <button class="area-chip" onclick="selectArea(this)">مدني</button>
+        <button class="area-chip" onclick="selectArea(this)">إداري</button>
+        <button class="area-chip" onclick="selectArea(this)">ضريبي</button>
+      </div>
+
+      <div class="field-label">اشرح استفسارك القانوني</div>
+      <div class="field-hint">كن محدداً قدر الإمكان لتحصل على إجابة دقيقة</div>
+      <textarea class="textarea-field" id="consultInput" style="min-height:140px" placeholder="مثال: قام صاحب العمل بفصلي دون سبب مشروع بعد 3 سنوات خدمة، ولم يصرف لي مستحقاتي. ما حقوقي القانونية؟"></textarea>
+
+      <div style="height:16px"></div>
+
+      <div id="consultResult" style="display:none">
+        <div class="warning-box">
+          <span>⚖️</span>
+          <div class="warning-text">هذه إجابة استرشادية مولّدة بالذكاء الاصطناعي — للحصول على استشارة قانونية رسمية راجع محامياً مرخصاً</div>
+        </div>
+        <div class="consult-card">
+          <div class="consult-card-title">⚖️ الرأي القانوني الاسترشادي</div>
+          <div id="consultAnswer" style="font-size:14px;line-height:2;color:var(--text-muted)"></div>
+          <div class="disclaimer">⚠️ للاسترشاد فقط — لا تُغني عن استشارة محامٍ مرخص</div>
+        </div>
+        <div class="action-btns">
+          <button class="btn-outline" onclick="copyConsult()">📋 نسخ</button>
+          <button class="btn-outline" onclick="newConsult()">🔄 استشارة جديدة</button>
+        </div>
+      </div>
+
+      <button class="btn-gold" onclick="submitConsult()" id="consultBtn" style="margin-top:8px">
+        ⚖️ تقديم الاستشارة
+      </button>
+
+      <div style="height:20px"></div>
+      <div class="section-title">💡 أمثلة على الاستشارات</div>
+      <div class="consult-history-item" onclick="fillConsult('فصلني صاحب العمل تعسفياً بعد 5 سنوات خدمة ولم يصرف مستحقاتي')">
+        <div style="font-size:13px;font-weight:600">🔹 فصل تعسفي وعدم صرف مستحقات</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">اضغط لاستخدام هذا المثال</div>
+      </div>
+      <div class="consult-history-item" onclick="fillConsult('أريد رفع دعوى طلاق للضرر، زوجي يرفض التطليق رغم الإساءة المستمرة')">
+        <div style="font-size:13px;font-weight:600">🔹 طلاق للضرر</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">اضغط لاستخدام هذا المثال</div>
+      </div>
+      <div class="consult-history-item" onclick="fillConsult('اشتريت منتجاً عبر الإنترنت وكان مغشوشاً، البائع يرفض الاسترداد')">
+        <div style="font-size:13px;font-weight:600">🔹 غش تجاري وعدم استرداد</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">اضغط لاستخدام هذا المثال</div>
+      </div>
+
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="goTo('home')"><span class="nav-item-icon">🏠</span>الرئيسية</div>
+      <div class="nav-item" onclick="goTo('regulations')"><span class="nav-item-icon">📚</span>الأنظمة</div>
+      <div class="nav-item" onclick="goTo('laweha')"><span class="nav-item-icon">📝</span>لائحة</div>
+      <div class="nav-item" onclick="goTo('chat')"><span class="nav-item-icon">🤖</span>مساعد</div>
+      <div class="nav-item" onclick="goTo('profile')"><span class="nav-item-icon">👤</span>حسابي</div>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modalOverlay" style="display:none" onclick="closeModal(event)">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="modalTitle"></div>
+      <div class="modal-content" id="modalContent"></div>
+      <div style="height:16px"></div>
+      <button class="btn-primary" onclick="closeModalDirect()">إغلاق</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===== CONFIG =====
+const CLAUDE_API_KEY = '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';
+const SUPABASE_URL = 'https://lajgpkhbgymwkrpuxepp.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_gGzUKlrwr9tH-MXK0s_clw_-MlyscDK';
+
+// ===== STATE =====
+let state = {
+  user: null,
+  currentScreen: 'splash',
+  selectedType: 'دعوى مدنية',
+  lawehaCount: 0,
+  chatCount: 20,
+  consultCount: 0,
+  currentCategory: 'all'
+};
+
+// ===== REGULATIONS DATA =====
+const regulations = [
+  { id:1, title:'نظام العمل السعودي', cat:'عمالي', year:'1426', desc:'ينظم العلاقة بين صاحب العمل والعامل، ويشمل حقوق وواجبات الطرفين، ساعات العمل، الإجازات، ومستحقات نهاية الخدمة.' },
+  { id:2, title:'نظام الأحوال الشخصية', cat:'أسري', year:'1443', desc:'ينظم أحكام الزواج والطلاق والنفقة والحضانة والنسب والميراث وفقاً لأحكام الشريعة الإسلامية.' },
+  { id:3, title:'نظام التجارة الإلكترونية', cat:'تجاري', year:'1440', desc:'ينظم المعاملات التجارية الإلكترونية ويحمي حقوق المستهلكين في التجارة الرقمية.' },
+  { id:4, title:'نظام مكافحة الجرائم المعلوماتية', cat:'جزائي', year:'1428', desc:'يجرّم الجرائم المرتكبة عبر الشبكة المعلوماتية ويحدد العقوبات المترتبة عليها.' },
+  { id:5, title:'نظام المرافعات الشرعية', cat:'مدني', year:'1435', desc:'ينظم إجراءات التقاضي أمام المحاكم الشرعية من رفع الدعوى حتى صدور الحكم وتنفيذه.' },
+  { id:6, title:'نظام الخدمة المدنية', cat:'إداري', year:'1397', desc:'ينظم شؤون الموظفين الحكوميين من تعيين وترقية وتأديب وإنهاء خدمة.' },
+  { id:7, title:'نظام الشركات', cat:'تجاري', year:'1437', desc:'ينظم تأسيس الشركات التجارية وأنواعها وحوكمتها وإجراءات تصفيتها.' },
+  { id:8, title:'نظام العقوبات التعزيرية', cat:'جزائي', year:'1421', desc:'يحدد العقوبات التعزيرية للجرائم التي لم يرد فيها نص شرعي صريح.' },
+  { id:9, title:'نظام حماية المستهلك', cat:'تجاري', year:'1436', desc:'يكفل حماية المستهلك من الغش والتدليس ويلزم الموردين بالشفافية.' },
+  { id:10, title:'نظام الإجراءات الجزائية', cat:'جزائي', year:'1422', desc:'ينظم إجراءات التحقيق والمحاكمة في القضايا الجزائية وحقوق المتهم.' },
+  { id:11, title:'نظام التحكيم', cat:'مدني', year:'1433', desc:'ينظم إجراءات التحكيم كوسيلة بديلة لفض النزاعات خارج نطاق القضاء.' },
+  { id:12, title:'نظام ضريبة القيمة المضافة', cat:'تجاري', year:'1438', desc:'ينظم تطبيق ضريبة القيمة المضافة بنسبة 15% على السلع والخدمات.' },
+  { id:13, title:'نظام الإجراءات الجزائية', cat:'جزائي', year:'1422', desc:'ينظم إجراءات القبض والتوقيف والتحقيق والمحاكمة. يكفل حقوق المتهم ويحدد صلاحيات رجال الضبط الجنائي والنيابة العامة.' },
+  { id:14, title:'نظام هيئة التحقيق والادعاء العام', cat:'جزائي', year:'1409', desc:'ينظم صلاحيات النيابة العامة في التحقيق والادعاء وحماية حقوق الموقوفين والمتهمين أمام القضاء.' },
+  { id:15, title:'حقوق الموقوف في مراكز الشرطة', cat:'جزائي', year:'1435', desc:'مستمدة من المادة 22 من اللائحة التنفيذية لنظام الإجراءات الجزائية. تكفل للموقوف: معرفة سبب القبض، الاستعانة بمحامٍ، إبلاغ ذويه، عدم التوقيف أكثر من 24 ساعة بدون أمر كتابي من المحقق.' },
+  { id:16, title:'نظام مكافحة جرائم التعذيب', cat:'جزائي', year:'1438', desc:'يجرّم التعذيب والإكراه أثناء التحقيق. أي اعتراف منتزع بالإكراه باطل لا يُعتد به أمام القضاء.' },
+  { id:17, title:'نظام الحماية من الإيذاء', cat:'أسري', year:'1434', desc:'يحمي الأفراد من جميع أشكال الإيذاء الجسدي والنفسي واللفظي والمالي داخل الأسرة. يُلزم بالإبلاغ الفوري ويوفر الإيواء وخدمات التأهيل للضحايا.' },
+  { id:18, title:'نظام حماية الطفل', cat:'أسري', year:'1436', desc:'يكفل حماية الطفل من الإيذاء والإهمال. العقوبة: سجن حتى سنة وغرامة حتى 50,000 ريال. تتضاعف عند التكرار أو إذا كان المعتدي من مسؤولي الرعاية. خط مساندة الطفل: 1919.' },
+  { id:19, title:'حقوق المرأة في الحماية الأسرية', cat:'أسري', year:'1434', desc:'مستمد من نظام الحماية من الإيذاء. يكفل للمرأة الحق في الحماية من العنف الجسدي والنفسي والمالي، وطلب الإيواء في دور الحماية، والمطالبة بالطلاق عند الضرر.' },
+];
+
+const quizData = [
+  // ===== العمل =====
+  { cat:'عمالي', q:'ما هي مدة إشعار إنهاء عقد العمل غير محدد المدة؟', opts:['أسبوع','شهر','شهران','3 أشهر'], ans:1 },
+  { cat:'عمالي', q:'كم ساعة الحد الأقصى للعمل الأسبوعي في القطاع الخاص؟', opts:['40 ساعة','45 ساعة','48 ساعة','50 ساعة'], ans:2 },
+  { cat:'عمالي', q:'ما هو الحد الأدنى لإجازة الأمومة بنظام العمل السعودي؟', opts:['4 أسابيع','8 أسابيع','10 أسابيع','12 أسبوعاً'], ans:3 },
+  { cat:'عمالي', q:'كم يوماً الإجازة السنوية للموظف في أول خمس سنوات؟', opts:['15 يوماً','21 يوماً','30 يوماً','45 يوماً'], ans:1 },
+  { cat:'عمالي', q:'ما حساب مكافأة نهاية الخدمة عن كل سنة للخمس الأولى؟', opts:['نصف راتب','راتب كامل','ثلثا راتب','راتبان'], ans:0 },
+  { cat:'عمالي', q:'ما الجهة المختصة بنزاعات العمل؟', opts:['المحكمة التجارية','المحكمة الابتدائية','المحكمة العمالية','ديوان المظالم'], ans:2 },
+  { cat:'عمالي', q:'ما نظام العمل الذي يحدد ساعات العمل في القطاع الخاص؟', opts:['نظام الخدمة المدنية','نظام العمل','نظام الأحوال الشخصية','نظام التجارة'], ans:1 },
+  { cat:'عمالي', q:'في رمضان كم تكون ساعات العمل اليومية للمسلم؟', opts:['4 ساعات','5 ساعات','6 ساعات','7 ساعات'], ans:2 },
+  { cat:'عمالي', q:'ما الحد الأدنى لمكافأة نهاية الخدمة عند الاستقالة بعد سنتين؟', opts:['لا شيء','ثلث المكافأة','نصف المكافأة','المكافأة كاملة'], ans:2 },
+  { cat:'عمالي', q:'خلال كم يوم يجب على صاحب العمل تسوية المستحقات عند إنهاء العقد؟', opts:['أسبوع','أسبوعان','شهر','شهران'], ans:1 },
+  // ===== القضاء =====
+  { cat:'قضائي', q:'ما هي مدة الاعتراض على الحكم الابتدائي؟', opts:['15 يوماً','30 يوماً','60 يوماً','90 يوماً'], ans:1 },
+  { cat:'قضائي', q:'ما هي أعلى درجة في سلم التقاضي بالمملكة؟', opts:['محكمة الاستئناف','المحكمة الابتدائية','المحكمة التجارية','المحكمة العليا'], ans:3 },
+  { cat:'قضائي', q:'أي محكمة تختص بنزاعات الشركات؟', opts:['المحكمة العامة','المحكمة العمالية','المحكمة التجارية','ديوان المظالم'], ans:2 },
+  { cat:'قضائي', q:'ما الجهة المختصة بالطعن في القرارات الحكومية؟', opts:['المحكمة التجارية','ديوان المظالم','المحكمة العمالية','المحكمة الجزائية'], ans:1 },
+  { cat:'قضائي', q:'ما معنى التحكيم في النزاعات؟', opts:['التقاضي أمام المحكمة','اللجوء لوسيط ملزم','الاستئناف','الشكوى للنيابة'], ans:1 },
+  { cat:'قضائي', q:'ما هي درجات التقاضي بالترتيب؟', opts:['ابتدائي→استئناف→عليا','عليا→استئناف→ابتدائي','استئناف→ابتدائي→عليا','لا ترتيب محدد'], ans:0 },
+  { cat:'قضائي', q:'ما مدة انعقاد الجلسة القضائية بعد إيداع الدعوى؟', opts:['أسبوع','شهر','3 أشهر','حسب المحكمة'], ans:3 },
+  { cat:'قضائي', q:'ما شرط قبول الدعوى المدنية أمام المحكمة؟', opts:['تقديم كفالة','توكيل محامٍ','تقديم صحيفة دعوى','الحضور شخصياً'], ans:2 },
+  // ===== الضرائب =====
+  { cat:'ضريبي', q:'كم تبلغ ضريبة القيمة المضافة في المملكة؟', opts:['5%','10%','15%','20%'], ans:2 },
+  { cat:'ضريبي', q:'متى بدأ تطبيق ضريبة القيمة المضافة في السعودية؟', opts:['2016','2018','2020','2022'], ans:1 },
+  { cat:'ضريبي', q:'ما نسبة الزكاة على الأموال الزكوية؟', opts:['1%','2%','2.5%','5%'], ans:2 },
+  { cat:'ضريبي', q:'ما ضريبة الدخل على الشركات الأجنبية؟', opts:['10%','15%','20%','25%'], ans:2 },
+  { cat:'ضريبي', q:'ما الجهة المشرفة على ضريبة القيمة المضافة؟', opts:['وزارة التجارة','وزارة المالية','هيئة الزكاة والضريبة','هيئة الاستثمار'], ans:2 },
+  { cat:'ضريبي', q:'ما الحد الأدنى للتسجيل في ضريبة القيمة المضافة؟', opts:['100 ألف ريال','375 ألف ريال','500 ألف ريال','مليون ريال'], ans:1 },
+  // ===== الأسرة =====
+  { cat:'أسري', q:'ما أقل سن للزواج نظاماً في المملكة؟', opts:['15 سنة','16 سنة','18 سنة','لا يوجد حد'], ans:2 },
+  { cat:'أسري', q:'كم سنة حضانة الأم للبنت بحد أقصى؟', opts:['7 سنوات','9 سنوات','13 سنة','حتى الزواج'], ans:1 },
+  { cat:'أسري', q:'ما شرط حضانة الأم بعد الطلاق؟', opts:['ألا تتزوج','ألا تعمل','أن تكون في نفس المدينة','كلها صحيحة'], ans:0 },
+  { cat:'أسري', q:'ما الخلع في نظام الأحوال الشخصية؟', opts:['طلاق الزوج','طلاق المرأة برد المهر','الطلاق القضائي','الطلاق للضرر'], ans:1 },
+  { cat:'أسري', q:'ما حق المرأة المطلقة في السكن خلال العدة؟', opts:['لا حق لها','حق السكن فقط','السكن والنفقة','السكن والنفقة والمتعة'], ans:1 },
+  { cat:'أسري', q:'كم مدة عدة المرأة المطلقة؟', opts:['شهر','شهران','3 أشهر أو 3 حيضات','6 أشهر'], ans:2 },
+  { cat:'أسري', q:'ما نصيب البنت الواحدة من الميراث إن لم يكن للمتوفى أبناء؟', opts:['الثمن','الربع','النصف','الثلثان'], ans:2 },
+  { cat:'أسري', q:'ما الجهة المختصة بقضايا الطلاق؟', opts:['المحكمة التجارية','المحكمة العمالية','محكمة الأحوال الشخصية','ديوان المظالم'], ans:2 },
+  // ===== الجزائي =====
+  { cat:'جزائي', q:'ما الحد الأقصى للتوقيف بدون أمر كتابي من المحقق؟', opts:['12 ساعة','24 ساعة','48 ساعة','72 ساعة'], ans:1 },
+  { cat:'جزائي', q:'هل الصمت في التحقيق يُعدّ إقراراً بالجريمة؟', opts:['نعم دائماً','لا','يحدده القاضي','نعم في الجرائم الكبرى'], ans:1 },
+  { cat:'جزائي', q:'ما حكم الاعتراف المنتزع بالإكراه؟', opts:['صحيح ومُعتدّ به','باطل لا يُعتدّ به','يُعتدّ به جزئياً','للقاضي تقديره'], ans:1 },
+  { cat:'جزائي', q:'ما الجهة المختصة بالإشراف على الموقوفين؟', opts:['وزارة الداخلية','هيئة التحقيق والادعاء','الشرطة','المحكمة العامة'], ans:1 },
+  { cat:'جزائي', q:'ما عقوبة التحرش في الأماكن العامة؟', opts:['غرامة فقط','سجن فقط','سجن وغرامة','تحذير'], ans:2 },
+  { cat:'جزائي', q:'ما الرقم المختص للإبلاغ عن الجرائم الإلكترونية؟', opts:['911','1900','1909','990'], ans:2 },
+  { cat:'جزائي', q:'ما الجهة المختصة بالنظر في الجرائم الجزائية ابتداءً؟', opts:['المحكمة التجارية','النيابة العامة','المحكمة العامة','ديوان المظالم'], ans:1 },
+  { cat:'جزائي', q:'ما حق الموقوف في إبلاغ ذويه؟', opts:['لا حق له','حق مكفول فوراً','بعد 24 ساعة','بإذن المحقق'], ans:1 },
+  // ===== التجارة =====
+  { cat:'تجاري', q:'ما أقل عدد مؤسسين لشركة ذات مسؤولية محدودة؟', opts:['مؤسس واحد','مؤسسان','5 مؤسسين','10 مؤسسين'], ans:0 },
+  { cat:'تجاري', q:'ما الجهة المختصة بتسجيل الشركات؟', opts:['وزارة المالية','وزارة التجارة','هيئة الاستثمار','وزارة الاقتصاد'], ans:1 },
+  { cat:'تجاري', q:'ما مدة الاعتراض على قرار رفض تسجيل العلامة التجارية؟', opts:['15 يوماً','30 يوماً','60 يوماً','90 يوماً'], ans:2 },
+  { cat:'تجاري', q:'ما الجهة المختصة بحل نزاعات الإفلاس؟', opts:['المحكمة العامة','المحكمة العمالية','المحكمة التجارية','ديوان المظالم'], ans:2 },
+  { cat:'تجاري', q:'ما حق المستهلك عند شراء منتج معيب؟', opts:['لا حق له','الاستبدال فقط','الاسترداد أو الاستبدال','خصم السعر فقط'], ans:2 },
+  { cat:'تجاري', q:'ما مدة ضمان المنتجات الإلكترونية نظاماً؟', opts:['3 أشهر','6 أشهر','سنة','سنتان'], ans:2 },
+  { cat:'تجاري', q:'ما الجهة للإبلاغ عن الغش التجاري؟', opts:['الشرطة','وزارة التجارة 1900','وزارة الصحة','هيئة الزكاة'], ans:1 },
+  { cat:'تجاري', q:'ما مدة صلاحية العلامة التجارية المسجلة؟', opts:['5 سنوات','10 سنوات','15 سنة','20 سنة'], ans:1 },
+  // ===== العقارات =====
+  { cat:'عقاري', q:'ما الجهة المشرفة على تسجيل العقارات رسمياً؟', opts:['وزارة الإسكان','وزارة العدل','أمانة المنطقة','وزارة التجارة'], ans:1 },
+  { cat:'عقاري', q:'ما الحد الأقصى لزيادة الإيجار عند التجديد؟', opts:['5%','10%','لا حد','يحدده العقد'], ans:2 },
+  { cat:'عقاري', q:'ما المنصة الإلزامية لتسجيل عقود الإيجار؟', opts:['أبشر','إيجار','منصة العمل','بلدي'], ans:1 },
+  { cat:'عقاري', q:'ما مدة إشعار إخلاء المستأجر؟', opts:['أسبوع','شهر','شهران','3 أشهر'], ans:1 },
+  { cat:'عقاري', q:'ما الجهة المختصة بنزاعات الإيجار؟', opts:['المحكمة التجارية','المحكمة العامة','المحكمة العمالية','ديوان المظالم'], ans:1 },
+  { cat:'عقاري', q:'ما رسوم نقل ملكية العقار (نظام رسوم التسجيل)؟', opts:['0.5%','1%','2%','5%'], ans:2 },
+  // ===== التقنية =====
+  { cat:'تقني', q:'ما عقوبة التشهير عبر الإنترنت بنظام الجرائم المعلوماتية؟', opts:['غرامة فقط','سجن سنة وغرامة','سجن 5 سنوات وغرامة','تحذير'], ans:1 },
+  { cat:'تقني', q:'ما الجهة المختصة بمكافحة الجرائم الإلكترونية؟', opts:['وزارة الاتصالات','النيابة العامة','هيئة الاتصالات','وزارة الداخلية'], ans:1 },
+  { cat:'تقني', q:'ما عقوبة الاختراق الإلكتروني غير المصرح به؟', opts:['غرامة 100 ألف','سجن سنة + غرامة مليون','سجن 3 سنوات + غرامة 2 مليون','تحذير رسمي'], ans:2 },
+  { cat:'تقني', q:'ما نظام الصادر عام 1443 لحماية البيانات الشخصية؟', opts:['نظام الاتصالات','نظام التعاملات الإلكترونية','نظام حماية البيانات الشخصية','نظام الجرائم المعلوماتية'], ans:2 },
+  { cat:'تقني', q:'هل العقد الإلكتروني مُعترف به نظاماً في السعودية؟', opts:['لا','نعم وفق نظام التعاملات الإلكترونية','يحتاج توثيق عدلي','للمحكمة تقديره'], ans:1 },
+  // ===== الحماية الأسرية =====
+  { cat:'حماية', q:'ما رقم خط مساندة الطفل؟', opts:['911','1910','1919','1900'], ans:2 },
+  { cat:'حماية', q:'ما رقم البرنامج الوطني للأمان الأسري؟', opts:['911','1910','1919','1900'], ans:1 },
+  { cat:'حماية', q:'ما عقوبة إيذاء الطفل بنظام حماية الطفل؟', opts:['غرامة فقط','سجن سنة + 50,000 ريال','سجن 5 سنوات','تحذير'], ans:1 },
+  { cat:'حماية', q:'ما الجهة لطلب الإيواء عند التعرض للعنف الأسري؟', opts:['الشرطة فقط','وزارة الموارد البشرية','المحكمة','أي منهم'], ans:3 },
+  { cat:'حماية', q:'ما أنواع الإيذاء التي يحميها نظام الحماية من الإيذاء؟', opts:['الجسدي فقط','الجسدي والنفسي','الجسدي والنفسي واللفظي','جميع الأنواع بما فيها المالي'], ans:3 },
+  { cat:'حماية', q:'هل يُجرَّم الإيذاء المالي (الاستيلاء على أموال الزوجة) في المملكة؟', opts:['لا','نعم بنظام الحماية من الإيذاء','يحدده القاضي','لا قانون له'], ans:1 },
+  // ===== الصحة =====
+  { cat:'صحي', q:'ما الجهة التي تمنح تراخيص الأطباء في المملكة؟', opts:['وزارة الصحة','هيئة التخصصات الصحية','الهيئة السعودية للتخصصات','هيئة الغذاء والدواء'], ans:1 },
+  { cat:'صحي', q:'ما الجهة المختصة بشكاوى الأخطاء الطبية؟', opts:['الشرطة','النيابة العامة','وزارة الصحة','هيئة الغذاء والدواء'], ans:2 },
+  { cat:'صحي', q:'هل يحق للمريض رفض العلاج؟', opts:['لا مطلقاً','نعم إذا كان واعياً','للطبيب تقديره','يحتاج إذن المحكمة'], ans:1 },
+  { cat:'صحي', q:'ما مدة الاحتفاظ بالسجلات الطبية نظاماً؟', opts:['5 سنوات','10 سنوات','25 سنة','مدة الحياة'], ans:1 },
+  // ===== الأنظمة العامة =====
+  { cat:'عام', q:'في أي سنة صدر نظام الأحوال الشخصية السعودي؟', opts:['1440','1441','1443','1444'], ans:2 },
+  { cat:'عام', q:'ما نظام الصادر عام 1444 هـ؟', opts:['نظام العمل','نظام الشركات','نظام المعاملات المدنية','نظام الإثبات'], ans:2 },
+  { cat:'عام', q:'ما الجهة المختصة بإصدار الأنظمة السعودية؟', opts:['مجلس الشورى','مجلس الوزراء','وزارة العدل','هيئة الخبراء'], ans:1 },
+  { cat:'عام', q:'ما نظام العمل الصادر بمرسوم ملكي عام 1426؟', opts:['نظام العمل','نظام التجارة','نظام المحاكم','نظام الشركات'], ans:0 },
+  { cat:'عام', q:'ما الجهة التي تستطيع الطعن في قراراتها أمام ديوان المظالم؟', opts:['الشركات الخاصة','الجهات الحكومية فقط','الأفراد فقط','الجميع'], ans:1 },
+  { cat:'عام', q:'ما معنى "التعزير" في الفقه الإسلامي والنظام السعودي؟', opts:['عقوبة الحدود','عقوبة مقدرة شرعاً','عقوبة يقدرها القاضي','الغرامة المالية فقط'], ans:2 },
+  { cat:'عام', q:'ما رقم هيئة حقوق الإنسان السعودية؟', opts:['1900','1910','1919','19911'], ans:3 },
+  { cat:'عام', q:'ما موقع الأنظمة الرسمية السعودية على الإنترنت؟', opts:['moj.gov.sa','boe.gov.sa','laws.gov.sa','ncar.gov.sa'], ans:1 },
+  // ===== الشرطة والنيابة =====
+  { cat:'جنائي', q:'ما حق الموقوف في الاستعانة بمحامٍ؟', opts:['لا حق له خلال التحقيق','حق مكفول من لحظة القبض','بعد اكتمال التحقيق','بإذن المحقق فقط'], ans:1 },
+  { cat:'جنائي', q:'ما مدة التوقيف الابتدائية بأمر المحقق؟', opts:['24 ساعة','5 أيام','أسبوع','شهر'], ans:1 },
+  { cat:'جنائي', q:'هل يجوز التفتيش المنزلي بدون أمر قضائي؟', opts:['نعم دائماً','لا مطلقاً','في حالات الضرورة','للشرطة صلاحية مطلقة'], ans:1 },
+  { cat:'جنائي', q:'ما الجهة التي تُشرف على مشروعية التوقيف؟', opts:['الشرطة','هيئة التحقيق والادعاء','المحكمة العامة','وزارة الداخلية'], ans:1 },
+  { cat:'جنائي', q:'ما منصة تقديم شكاوى ضد الجهات الحكومية؟', opts:['بلدي','أبشر','توكلنا','ناجز'], ans:1 },
+  // ===== التحكيم والوساطة =====
+  { cat:'تحكيم', q:'هل حكم التحكيم ملزم للأطراف؟', opts:['لا','نعم','يحتاج مصادقة محكمة','للطرف اختياره'], ans:0 },
+  { cat:'تحكيم', q:'ما مدة الطعن في حكم التحكيم؟', opts:['15 يوماً','30 يوماً','60 يوماً','90 يوماً'], ans:3 },
+  { cat:'تحكيم', q:'ما الجهة المختصة بالتحكيم التجاري الدولي في السعودية؟', opts:['المحكمة التجارية','مركز التحكيم التجاري الخليجي','وزارة التجارة','ديوان المظالم'], ans:1 },
+  // ===== المزيد =====
+  { cat:'عمالي', q:'ما الحد الأقصى للاقتطاع من راتب العامل لسداد الديون؟', opts:['10%','25%','50%','لا حد'], ans:1 },
+  { cat:'عمالي', q:'هل يحق لصاحب العمل تعديل بنود العقد بشكل منفرد؟', opts:['نعم مطلقاً','لا يجوز إلا باتفاق','للطرفين حق الفسخ','يحدده القاضي'], ans:1 },
+  { cat:'عمالي', q:'ما مدة تقديم دعوى العمل من تاريخ انتهاء العقد؟', opts:['شهر','6 أشهر','سنة','3 سنوات'], ans:2 },
+  { cat:'أسري', q:'ما حق الأب في حضانة أولاده بعد الطلاق؟', opts:['لا حق له','حق الزيارة فقط','الحضانة عند انتهاء سن الحاضنة','الحضانة المطلقة'], ans:2 },
+  { cat:'تجاري', q:'ما الحد الأدنى لرأس مال شركة المساهمة المقفلة؟', opts:['100 ألف','500 ألف','مليون','5 مليون'], ans:0 },
+  { cat:'عقاري', q:'ما رسوم الأراضي البيضاء السنوية داخل النطاق العمراني؟', opts:['1%','2.5%','5%','10%'], ans:1 },
+  { cat:'تقني', q:'ما الحد الأقصى لغرامة انتهاك حماية البيانات الشخصية؟', opts:['100 ألف','500 ألف','مليون','5 مليون ريال'], ans:3 },
+  { cat:'صحي', q:'ما حق المريض في الاطلاع على ملفه الطبي؟', opts:['لا حق له','حق كامل','بعد الخروج فقط','بإذن الطبيب'], ans:1 },
+  { cat:'عام', q:'ما السن القانونية للمسؤولية الجنائية في السعودية؟', opts:['12 سنة','15 سنة','18 سنة','21 سنة'], ans:2 },
+  { cat:'جنائي', q:'ما حق المتهم في محاضر التحقيق؟', opts:['لا حق له','الاطلاع عليها','الاطلاع والحصول على نسخة','الاعتراض عليها فقط'], ans:2 },
+];
+
+// ===== SPLASH =====
+let progress = 0;
+const bar = document.getElementById('splashBar');
+const splashInterval = setInterval(() => {
+  progress += 4;
+  bar.style.width = progress + '%';
+  if (progress >= 100) {
+    clearInterval(splashInterval);
+    setTimeout(() => {
+      const saved = localStorage.getItem('mizan_user');
+      if (saved) {
+        state.user = JSON.parse(saved);
+        updateUserUI();
+        showScreen('home');
+      } else {
+        showScreen('auth');
+      }
+    }, 400);
+  }
+}, 60);
+
+// ===== NAVIGATION =====
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  state.currentScreen = id;
+  if (id === 'regulations') renderRegs('all');
+  if (id === 'quiz') loadQuiz();
+  if (id === 'chat') initChat();
+  if (id === 'consult') { updateConsultDisplay(); }
+}
+
+function goTo(id) { 
+  navHistory.push(state.currentScreen);
+  showScreen(id); 
+}
+
+let navHistory = [];
+
+function goBack() {
+  if (navHistory.length > 0) {
+    const prev = navHistory.pop();
+    showScreen(prev);
+  } else {
+    showScreen('home');
+  }
+}
+
+// ===== AUTH =====
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (tab==='login'&&i===0)||(tab==='register'&&i===1)));
+  document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
+  document.getElementById('registerForm').style.display = tab==='register'?'block':'none';
+}
+
+function login() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if (!email || !pass) { showToast('⚠️ أدخل البريد وكلمة المرور'); return; }
+  state.user = { name: email.split('@')[0], email, plan:'free', lawehaCount:0, chatCount:20, consultCount:0 };
+  localStorage.setItem('mizan_user', JSON.stringify(state.user));
+  updateUserUI();
+  showToast('✅ مرحباً بك في ميزان');
+  showScreen('home');
+}
+
+function register() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPass').value;
+  if (!name||!email||!pass) { showToast('⚠️ أكمل جميع الحقول'); return; }
+  if (pass.length < 6) { showToast('⚠️ كلمة المرور 6 أحرف على الأقل'); return; }
+  state.user = { name, email, plan:'free', lawehaCount:0, chatCount:20, consultCount:0 };
+  localStorage.setItem('mizan_user', JSON.stringify(state.user));
+  updateUserUI();
+  showToast('✅ تم إنشاء حسابك بنجاح');
+  showScreen('home');
+}
+
+function logout() {
+  localStorage.removeItem('mizan_user');
+  state.user = null;
+  showScreen('auth');
+}
+
+function updateUserUI() {
+  if (!state.user) return;
+  const u = state.user;
+  document.getElementById('welcomeName').textContent = u.name;
+  document.getElementById('profileName').textContent = u.name;
+  document.getElementById('profileEmail').textContent = u.email;
+
+  // Laweha counter
+  const lMax = u.plan === '3months' ? 8 : u.plan === 'monthly' ? 3 : 0;
+  const lEl = document.getElementById('lawehaCount');
+  if (lEl) lEl.textContent = u.plan === 'free' ? 'اشترك للحصول على لوائح' : `${u.lawehaCount} / ${lMax}`;
+
+  // Chat counter badge
+  const cBadge = document.getElementById('chatBadge');
+  if (cBadge) {
+    if (u.plan === 'free') {
+      cBadge.textContent = u.chatCount + ' متبقي';
+      cBadge.style.background = u.chatCount > 5 ? 'rgba(46,204,113,0.2)' : 'rgba(231,76,60,0.2)';
+    } else {
+      cBadge.textContent = '∞ غير محدود';
+      cBadge.style.background = 'rgba(46,204,113,0.2)';
+    }
+  }
+
+  // Laweha badge
+  const lBadge = document.getElementById('lawehaBadge');
+  if (lBadge) {
+    if (u.plan === 'free') {
+      lBadge.textContent = 'اشترك';
+      lBadge.style.background = 'rgba(231,76,60,0.2)';
+    } else {
+      lBadge.textContent = u.lawehaCount + ' متبقي';
+      lBadge.style.background = u.lawehaCount > 1 ? 'rgba(46,204,113,0.2)' : 'rgba(231,76,60,0.2)';
+    }
+  }
+
+  // Consult badge
+  const conBadge = document.getElementById('consultBadge');
+  if (conBadge) {
+    if (u.plan === 'free') {
+      conBadge.textContent = 'اشترك';
+      conBadge.style.background = 'rgba(231,76,60,0.2)';
+    } else {
+      conBadge.textContent = u.consultCount + ' متبقي';
+      conBadge.style.background = u.consultCount > 0 ? 'rgba(46,204,113,0.2)' : 'rgba(231,76,60,0.2)';
+    }
+  }
+
+  // Plan name
+  const planEl = document.getElementById('planName');
+  if (planEl) {
+    const plans = { free: 'مجاني', monthly: 'شهري — 49 ريال', '3months': '3 أشهر — 180 ريال' };
+    planEl.textContent = plans[u.plan] || 'مجاني';
+  }
+}
+
+// ===== REGULATIONS =====
+function renderRegs(cat) {
+  const search = (document.getElementById('searchInput')||{}).value||'';
+  const filtered = regulations.filter(r =>
+    (cat==='all'||r.cat===cat) &&
+    (r.title.includes(search)||r.desc.includes(search))
+  );
+  document.getElementById('regsList').innerHTML = filtered.map(r => `
+    <div class="reg-card" onclick="openModal('${r.title}','${r.desc}')">
+      <div class="reg-card-header">
+        <div class="reg-card-title">${r.title}</div>
+        <span class="reg-card-arrow">←</span>
+      </div>
+      <div class="reg-card-meta">صدر عام ${r.year} هـ</div>
+      <span class="reg-badge" style="background:rgba(201,168,76,0.15);color:var(--gold)">${r.cat}</span>
+    </div>
+  `).join('');
+}
+
+function filterCat(btn, cat) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.currentCategory = cat;
+  renderRegs(cat);
+}
+
+function filterRegs() { renderRegs(state.currentCategory); }
+
+function openReg(title) {
+  const reg = regulations.find(r => r.title === title);
+  if (reg) openModal(reg.title, reg.desc);
+}
+
+// ===== LAWEHA GENERATOR =====
+function selectType(el, type) {
+  document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.selectedType = type;
+}
+
+async function generateLaweha() {
+  const facts = document.getElementById('factsInput').value.trim();
+  const request = document.getElementById('requestInput').value.trim();
+  if (!facts) { showToast('⚠️ أدخل وقائع القضية'); return; }
+  if (!request) { showToast('⚠️ أدخل المطلوب من المحكمة'); return; }
+
+  const user = state.user;
+  if (!user || user.plan === 'free') {
+    showToast('⚠️ إنشاء اللوائح للمشتركين فقط');
+    showUpgrade();
+    return;
+  }
+  if (user.lawehaCount <= 0) {
+    showToast('⚠️ استنفدت لوائحك — جدّد اشتراكك');
+    showUpgrade();
+    return;
+  }
+
+  showLoading('جارٍ إنشاء اللائحة...');
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 1500,
+        system: `أنت مساعد قانوني متخصص في الأنظمة السعودية. مهمتك صياغة لوائح قضائية باللغة العربية الرسمية.
+القواعد:
+- استخدم الصيغة القانونية الرسمية السعودية
+- ابدأ بـ "بسم الله الرحمن الرحيم"
+- ثم "سعادة رئيس المحكمة المحترم"
+- اذكر المدعي والمدعى عليه بصيغة رسمية
+- اسرد الوقائع بأسلوب قانوني واضح
+- اختم بطلبات المدعي
+- لا تخترع وقائع غير مذكورة`,
+        messages: [{
+          role: 'user',
+          content: `أنشئ ${state.selectedType} بناءً على المعلومات التالية:\n\nالوقائع:\n${facts}\n\nالمطلوب من المحكمة:\n${request}`
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content?.[0]?.text || 'حدث خطأ في إنشاء اللائحة';
+
+    document.getElementById('lawehaText').textContent = text;
+    document.getElementById('lawehaResult').style.display = 'block';
+
+    if (state.user) {
+      state.user.lawehaCount = Math.max(0, (state.user.lawehaCount||5) - 1);
+      localStorage.setItem('mizan_user', JSON.stringify(state.user));
+      updateUserUI();
+    }
+
+    document.getElementById('lawehaResult').scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    showToast('❌ حدث خطأ — تحقق من الاتصال');
+  } finally {
+    hideLoading();
+  }
+}
+
+function copyLaweha() {
+  const text = document.getElementById('lawehaText').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('✅ تم النسخ'));
+}
+
+function shareLaweha() {
+  const text = document.getElementById('lawehaText').textContent;
+  if (navigator.share) {
+    navigator.share({ title: 'لائحة من تطبيق ميزان', text });
+  } else {
+    copyLaweha();
+  }
+}
+
+function newLaweha() {
+  document.getElementById('lawehaResult').style.display = 'none';
+  document.getElementById('factsInput').value = '';
+  document.getElementById('requestInput').value = '';
+  window.scrollTo(0,0);
+}
+
+// ===== QUIZ =====
+function loadQuiz() {
+  const shuffled = [...quizData].sort(() => Math.random()-0.5).slice(0,5);
+  const cats = {'عمالي':'👷','قضائي':'⚖️','ضريبي':'💰','أسري':'👨‍👩‍👧','جزائي':'🚨','تجاري':'🏢','عقاري':'🏠','تقني':'💻','حماية':'🛡️','صحي':'🏥','عام':'📋','جنائي':'🚔','تحكيم':'🤝'};
+  const arabic = ['أ','ب','ج','د'];
+  document.getElementById('quizContainer').innerHTML = shuffled.map((q,i) => `
+    <div class="quiz-card">
+      <div style="font-size:10px;color:var(--gold);margin-bottom:6px;letter-spacing:1px">${cats[q.cat]||'📋'} ${q.cat||'عام'}</div>
+      <div class="quiz-question">س${i+1}: ${q.q}</div>
+      ${q.opts.map((o,j) => `
+        <div class="quiz-option" onclick="checkAnswer(this,${j},${q.ans})">
+          <span style="color:var(--gold);font-weight:700;margin-left:8px">${arabic[j]}</span> ${o}
+        </div>
+      `).join('')}
+    </div>
+  `).join('') + `<div style="text-align:center;padding:10px;font-size:12px;color:var(--text-muted)">من إجمالي ${quizData.length} سؤال متاح</div>`;
+}
+
+function checkAnswer(el, chosen, correct) {
+  const opts = el.parentElement.querySelectorAll('.quiz-option');
+  opts.forEach(o => o.style.pointerEvents='none');
+  opts[correct].classList.add('correct');
+  if (chosen !== correct) el.classList.add('wrong');
+}
+
+// ===== MODAL =====
+function openModal(title, content) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalContent').textContent = content;
+  document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+function closeModal(e) {
+  if (e.target.id === 'modalOverlay') closeModalDirect();
+}
+
+function closeModalDirect() {
+  document.getElementById('modalOverlay').style.display = 'none';
+}
+
+// ===== UPGRADE =====
+function showUpgrade() {
+  goTo('subscription'); return;
+  openModal('الاشتراك ⭐',
+    'اشترك الآن للحصول على:\n\n' +
+    '✅ لوائح غير محدودة\n' +
+    '✅ حفظ اللوائح السابقة\n' +
+    '✅ تحديثات فورية للأنظمة\n' +
+    '💰 15 ريال / شهر\n' +
+    '💰 99 ريال / سنة (وفّر 45%)\n\n' +
+    'للاشتراك تواصل معنا عبر واتساب'
+  );
+}
+
+// ===== LOADING =====
+function showLoading(text='جارٍ المعالجة...') {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').style.display = 'flex';
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+
+
+// ===== AI CHAT =====
+const CHAT_SYSTEM = `أنت مساعد ميزان الذكي — مساعد قانوني سعودي متخصص في تطبيق ميزان.
+
+=== معلومات التطبيق ===
+التحميل: مجاني — 20 محادثة AI عند التسجيل
+شهري: 49 ريال — 5 لوائح كامل الاشتراك
+3 أشهر: 180 ريال — 10 لوائح كامل الاشتراك
+الدفع: Apple أو Google Play تلقائياً
+
+=== الجهات المختصة بكل نزاع ===
+نزاع عمالي → المحكمة العمالية
+نزاع تجاري → المحكمة التجارية
+نزاع أسري → محكمة الأحوال الشخصية
+جريمة جزائية → النيابة العامة ثم المحكمة الجزائية
+نزاع عقاري → المحكمة العامة أو التجارية
+ضريبة/زكاة → هيئة الزكاة والضريبة + ديوان المظالم للطعن
+عنف أسري → وزارة الموارد البشرية + 1919 + الشرطة 911
+جرائم معلوماتية → النيابة العامة + المحكمة الجزائية المتخصصة
+مخالفات تجارية → وزارة التجارة 1900
+إفلاس/تعثر مالي → المحكمة التجارية (نظام الإفلاس)
+منافسة غير مشروعة → الهيئة العامة للمنافسة
+نزاعات إدارية مع جهة حكومية → ديوان المظالم
+مخالفات صحية/دواء → وزارة الصحة + هيئة الغذاء والدواء
+تحرش في العمل → وزارة الموارد البشرية + النيابة العامة
+مخالفة حقوق مؤلف → هيئة الملكية الفكرية
+
+=== درجات التقاضي ===
+1. المحكمة الابتدائية — مهلة الاعتراض: 30 يوماً
+2. محكمة الاستئناف
+3. المحكمة العليا — تراجع تطبيق النظام فقط
+
+=== المجموعة 2: القضاء ===
+نظام المرافعات الشرعية (1435هـ): إجراءات التقاضي من رفع الدعوى للحكم وتنفيذه
+نظام الإجراءات الجزائية (1422هـ): القبض والتوقيف والتحقيق وحقوق المتهم
+نظام الإثبات (1443هـ): طرق إثبات الحقوق — البينة والإقرار واليمين
+نظام المحاكم التجارية (1441هـ): إجراءات التقاضي التجاري
+نظام ديوان المظالم (1428هـ): القضاء الإداري للنزاعات مع الجهات الحكومية
+نظام التحكيم (1433هـ): فض النزاعات خارج المحاكم — ملزم قانوناً
+
+=== المجموعة 3: العمل ===
+نظام العمل (1426هـ): عقود العمل وساعاته وإجازاته ومستحقات نهاية الخدمة
+نظام الخدمة المدنية (1397هـ): شؤون الموظفين الحكوميين
+نظام التأمينات الاجتماعية (1421هـ): تغطية الإصابات والتقاعد والعجز
+نظام العمالة الوافدة: استقدام العمالة وتصاريح العمل — وزارة الموارد البشرية
+
+=== المجموعة 4: التجارة ===
+نظام الشركات (1437هـ): تأسيس الشركات وحوكمتها وتصفيتها
+نظام التجارة الإلكترونية (1440هـ): حماية المستهلك الرقمي والمعاملات الإلكترونية
+نظام حماية المستهلك (1436هـ): حقوق المستهلك ومكافحة الغش والتدليس
+نظام المعاملات المدنية (1444هـ): العقود والالتزامات المدنية والحقوق العينية
+نظام الإفلاس (1439هـ): إجراءات التعثر المالي وإعادة الهيكلة والتصفية — المحكمة التجارية
+نظام الملكية الفكرية: حماية الابتكار والعلامات وبراءة الاختراع — هيئة الملكية الفكرية
+نظام العلامات التجارية (1423هـ): حماية العلامات وعقوبات التزوير
+نظام المنافسة (1440هـ): منع الاحتكار والممارسات التجارية المقيدة — الهيئة العامة للمنافسة
+
+=== المجموعة 5: الضرائب ===
+ضريبة القيمة المضافة (1438هـ): VAT 15٪ على السلع والخدمات
+ضريبة الدخل: 20٪ على الشركات الأجنبية — هيئة الزكاة والضريبة
+الزكاة: 2.5٪ على الأموال الزكوية — هيئة الزكاة والضريبة والجمارك
+مكافحة غسل الأموال (1439هـ): تجريم إخفاء مصادر الأموال غير المشروعة — النيابة المتخصصة
+
+=== المجموعة 6: العقارات ===
+نظام التسجيل العيني للعقار (1423هـ): توثيق ملكية العقارات — وزارة العدل
+نظام الإيجار (إيجار): عقود الإيجار السكنية والتجارية — منصة إيجار إلزامية
+نظام التمويل العقاري (1433هـ): قروض شراء المساكن وضمانات التمويل
+رسوم الأراضي البيضاء (1436هـ): رسوم سنوية على الأراضي غير المطورة داخل المدن
+
+=== المجموعة 7: الأسرة ===
+نظام الأحوال الشخصية (1443هـ): الزواج والطلاق والنفقة والحضانة والميراث
+نظام الحماية من الإيذاء (1434هـ): حماية شاملة من العنف الجسدي والنفسي والمالي — ابلغ: 1919
+نظام حماية الطفل (1436هـ معدّل 1443هـ): سجن + 50,000 ريال تتضاعف عند التكرار — خط الطفل: 1919
+نظام الأحوال المدنية: الهوية الوطنية وبطاقات الإقامة وقيد المواليد والوفيات
+
+=== المجموعة 8: التقنية ===
+نظام مكافحة الجرائم المعلوماتية (1428هـ): التشهير والاختراق والابتزاز — عقوبات سجن + غرامة
+نظام حماية البيانات الشخصية (1443هـ): حماية بيانات الأفراد الرقمية — هيئة حماية البيانات
+نظام الاتصالات (1441هـ): تنظيم خدمات الاتصالات — هيئة الاتصالات والفضاء والتقنية
+نظام التعاملات الإلكترونية (1428هـ): صحة العقود والتوقيعات الإلكترونية قانونياً
+
+=== المجموعة 9: الصحة ===
+نظام الصحة (1423هـ): حقوق المريض والخدمات الصحية — وزارة الصحة
+نظام مزاولة المهن الصحية (1426هـ): تراخيص الأطباء والممارسين — هيئة التخصصات الصحية
+نظام الغذاء والدواء (1436هـ): سلامة الغذاء وترخيص المنتجات — هيئة الغذاء والدواء
+
+=== المجموعة 10: التعليم ===
+نظام التعليم (1436هـ): تنظيم المراحل التعليمية وحقوق الطلاب — وزارة التعليم
+نظام الجامعات (1441هـ): التعليم العالي وحوكمة الجامعات
+نظام حقوق المؤلف (1424هـ): حماية المصنفات الأدبية والفنية والعلمية — هيئة الملكية الفكرية
+
+=== المجموعة 11: الجزائية والأمن ===
+نظام مكافحة التحرش (1440هـ): تجريم التحرش في العمل والأماكن العامة — سجن + غرامة
+نظام مكافحة المخدرات (1386هـ): تجريم التعاطي والنقل والتهريب — عقوبات صارمة
+نظام مكافحة الإرهاب (1435هـ): تجريم الأعمال الإرهابية وتمويلها
+حقوق الموقوف: 24 ساعة حد أقصى — حق صمت — حق محامٍ — حق إبلاغ الأسرة
+نظام مكافحة جرائم التعذيب (1438هـ): الاعتراف بالإكراه باطل قانوناً
+
+=== قواعد التوجيه الذكي ===
+عندما يصف المستخدم مشكلته افعل هذا:
+1. حدد نوع النزاع بسرعة
+2. اذكر النظام المنطبق بالاسم والسنة
+3. حدد الجهة المختصة بوضوح
+4. اشرح الإجراء الأول الذي يجب اتخاذه
+5. وجّه لمنشئ اللوائح إن كان مناسباً
+
+أمثلة:
+فصلني صاحب العمل → نظام العمل (1426هـ) — المحكمة العمالية — أنشئ لائحة دعوى عمالية من قسم لائحتي
+زوجي يضربني → نظام الحماية من الإيذاء — اتصل بـ 1919 أو 911 فوراً
+اشتريت منتج مغشوش → نظام حماية المستهلك — وزارة التجارة 1900
+
+=== قواعد الإجابة ===
+- أجب بالعربية دائماً
+- لا تستخدم جداول Markdown أو ### أو ## — استخدم النقاط والفقرات فقط
+- الردود واضحة ومنظمة بدون تنسيق معقد
+- كن محدداً: النظام + الجهة المختصة + الخطوة الأولى
+- إذا كان الخطر فورياً → وجّه لـ 911 أولاً
+- اذكر دائماً في النهاية: ⚠️ للاسترشاد فقط — استشر محامياً مرخصاً`;
+
+let chatHistory = [];
+let chatInitialized = false;
+
+function initChat() {
+  if (chatInitialized) return;
+  chatInitialized = true;
+  const welcomeMsg = 'مرحباً! أنا مساعد ميزان الذكي ⚖️\n\nأنا على دراية كاملة بجميع الأنظمة السعودية وتفاصيل التطبيق.\n\nكيف يمكنني مساعدتك اليوم؟';
+  appendBotMessage(welcomeMsg);
+}
+
+function formatBotText(text) {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/#{3} (.+)/g, '<strong style="color:var(--gold-light);font-size:13px">$1</strong>')
+    .replace(/#{2} (.+)/g, '<strong style="color:var(--gold);font-size:14px">$1</strong>')
+    .replace(/#{1} (.+)/g, '<strong style="color:var(--gold);font-size:15px">$1</strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^- (.+)/gm, '• $1')
+    .replace(/^\d+\. (.+)/gm, (m) => m)
+    .replace(/\n/g, '<br>');
+}
+
+function appendBotMessage(text) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  const av = document.createElement('div');
+  av.className = 'msg-avatar';
+  av.textContent = '⚖️';
+  const wr = document.createElement('div');
+  const bub = document.createElement('div');
+  bub.className = 'msg-bubble';
+  bub.innerHTML = formatBotText(text);
+  wr.appendChild(bub);
+  div.appendChild(av);
+  div.appendChild(wr);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function appendUserMessage(text) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  const av = document.createElement('div');
+  av.className = 'msg-avatar';
+  av.textContent = '👤';
+  const wr = document.createElement('div');
+  const bub = document.createElement('div');
+  bub.className = 'msg-bubble';
+  bub.textContent = text;
+  wr.appendChild(bub);
+  div.appendChild(av);
+  div.appendChild(wr);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.id = 'typingIndicator';
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar';
+  avatar.textContent = '⚖️';
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  const typing = document.createElement('div');
+  typing.className = 'typing-indicator';
+  for (let i = 0; i < 3; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'typing-dot';
+    typing.appendChild(dot);
+  }
+  bubble.appendChild(typing);
+  const wrapper = document.createElement('div');
+  wrapper.appendChild(bubble);
+  div.appendChild(avatar);
+  div.appendChild(wrapper);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function hideTyping() {
+  const t = document.getElementById('typingIndicator');
+  if (t) t.remove();
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Check free user chat limit
+  if (state.user && state.user.plan === 'free' && (state.user.chatCount || 0) <= 0) {
+    appendBotMessage('انتهت محادثاتك المجانية الـ 20. اشترك الآن للحصول على محادثات غير محدودة! 🔓');
+    showUpgrade();
+    return;
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+  appendUserMessage(text);
+
+  chatHistory.push({ role: 'user', content: text });
+  showTyping();
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 2000,
+        system: CHAT_SYSTEM,
+        messages: chatHistory.slice(-10)
+      })
+    });
+
+    const data = await response.json();
+    const reply = data.content?.[0]?.text || 'عذراً، حدث خطأ. حاول مرة أخرى.';
+
+    hideTyping();
+    appendBotMessage(reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+
+    // Deduct chat count for free users
+    if (state.user && state.user.plan === 'free') {
+      state.user.chatCount = Math.max(0, (state.user.chatCount || 0) - 1);
+      localStorage.setItem('mizan_user', JSON.stringify(state.user));
+      updateUserUI();
+      if (state.user.chatCount === 0) {
+        setTimeout(() => {
+          appendBotMessage('لقد استنفدت محادثاتك المجانية الـ 20. اشترك للحصول على محادثات غير محدودة! 🔓');
+          showUpgrade();
+        }, 1000);
+      } else if (state.user.chatCount <= 5) {
+        appendBotMessage('تنبيه: تبقى لك ' + state.user.chatCount + ' محادثة مجانية. اشترك للحصول على محادثات غير محدودة ✨');
+      }
+    }
+
+  } catch(e) {
+    hideTyping();
+    appendBotMessage('عذراً، تعذّر الاتصال. تحقق من الإنترنت وحاول مجدداً.');
+  }
+}
+
+function sendSuggestion(text) {
+  document.getElementById('chatInput').value = text;
+  sendChat();
+}
+
+
+// ===== CONSULT =====
+let selectedArea = 'عمالي';
+
+function selectArea(el) {
+  document.querySelectorAll('.area-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedArea = el.textContent;
+}
+
+function fillConsult(text) {
+  document.getElementById('consultInput').value = text;
+  document.getElementById('consultInput').scrollIntoView({behavior:'smooth'});
+}
+
+function updateConsultDisplay() {
+  const el = document.getElementById('consultCountDisplay');
+  if (!el || !state.user) return;
+  const u = state.user;
+  if (u.plan === 'free') {
+    el.textContent = 'اشترك للبدء';
+    el.style.color = '#ff8080';
+  } else {
+    el.textContent = u.consultCount + ' استشارة متبقية';
+    el.style.color = u.consultCount > 0 ? 'var(--gold)' : '#ff8080';
+  }
+}
+
+async function submitConsult() {
+  const user = state.user;
+  if (!user || user.plan === 'free') {
+    showToast('⚠️ الاستشارات للمشتركين فقط');
+    showUpgrade();
+    return;
+  }
+  if (user.consultCount <= 0) {
+    showToast('⚠️ استنفدت استشاراتك — جدّد اشتراكك');
+    showUpgrade();
+    return;
+  }
+
+  const question = document.getElementById('consultInput').value.trim();
+  if (!question) { showToast('⚠️ اكتب استفسارك القانوني'); return; }
+
+  showLoading('جارٍ إعداد الرأي القانوني...');
+  document.getElementById('consultResult').style.display = 'none';
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 1500,
+        system: `أنت مستشار قانوني سعودي متخصص في مجال ${selectedArea}. أجب على الاستفسار القانوني بشكل واضح ومنظم. اذكر النظام القانوني المنطبق، الجهة المختصة، والإجراءات المقترحة. اختم دائماً بـ: "⚠️ هذا رأي استرشادي فقط — استشر محامياً مرخصاً للحصول على مشورة رسمية"`,
+        messages: [{ role: 'user', content: `مجال الاستشارة: ${selectedArea}
+
+الاستفسار: ${question}` }]
+      })
+    });
+    const data = await response.json();
+    const answer = data.content?.[0]?.text || 'تعذر الحصول على إجابة';
+    document.getElementById('consultAnswer').innerHTML = formatBotText(answer);
+    document.getElementById('consultResult').style.display = 'block';
+    document.getElementById('consultResult').scrollIntoView({behavior:'smooth'});
+
+    // Deduct consult count
+    state.user.consultCount = Math.max(0, state.user.consultCount - 1);
+    localStorage.setItem('mizan_user', JSON.stringify(state.user));
+    updateUserUI();
+    updateConsultDisplay();
+
+  } catch(e) {
+    showToast('❌ حدث خطأ — تحقق من الاتصال');
+  } finally {
+    hideLoading();
+  }
+}
+
+function copyConsult() {
+  const text = document.getElementById('consultAnswer').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('✅ تم النسخ'));
+}
+
+function newConsult() {
+  document.getElementById('consultResult').style.display = 'none';
+  document.getElementById('consultInput').value = '';
+}
+
+// ===== SUBSCRIPTION =====
+let selectedPlan = '3months';
+
+function selectPlan(plan) {
+  if (plan !== 'monthly' && plan !== '3months') return;
+  selectedPlan = plan;
+  document.querySelectorAll('.plan-card-sub').forEach(c => c.classList.remove('selected'));
+  const el = document.getElementById('plan-' + plan);
+  if (el) el.classList.add('selected');
+}
+
+function subscribePlan() {
+  const plans = {
+    'monthly': { name: 'شهري', price: '49 ريال', laweha:3, consult:3, chat:'غير محدود', storeId: 'com.mizan.monthly' },
+    '3months': { name: '3 أشهر', price: '180 ريال', laweha:8, consult:8, chat:'غير محدود', storeId: 'com.mizan.threemonths' }
+  };
+  const p = plans[selectedPlan] || plans['monthly'];
+
+  // Simulate subscription activation (real payment via Store)
+  if (state.user) {
+    state.user.plan = selectedPlan;
+    state.user.lawehaCount = p.laweha;
+    state.user.consultCount = p.consult;
+    state.user.chatCount = 999;
+    localStorage.setItem('mizan_user', JSON.stringify(state.user));
+    updateUserUI();
+  }
+
+  openModal('تأكيد الاشتراك ⭐',
+    'اخترت خطة: ' + p.name + '\n' +
+    'المبلغ: ' + p.price + '\n' +
+    'لوائح الدعوى: ' + p.laweha + '\n' +
+    'الاستشارات القانونية: ' + p.consult + '\n' +
+    'قسم الذكاء الاصطناعي: ' + p.chat + '\n\n' +
+    '💳 الدفع عبر Apple App Store أو Google Play فقط\n' +
+    'يتجدد تلقائياً — يمكن الإلغاء من إعدادات جوالك\n\n' +
+    '✅ تم تفعيل الاشتراك تجريبياً في هذه النسخة'
+  );
+}
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  t.style.opacity = '1';
+  setTimeout(() => {
+    t.style.opacity = '0';
+    setTimeout(() => t.style.display='none', 300);
+  }, 2500);
+}
+</script>
+</body>
+</html>
