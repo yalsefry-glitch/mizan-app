@@ -1,0 +1,17 @@
+{
+  "name": "ميزان - دليلك القانوني السعودي",
+  "short_name": "ميزان",
+  "description": "تطبيق ميزان: 60 نظاما سعوديا، مرشد قانوني ذكي، لوائح واستشارات ونماذج. استشر. اعرف. تصرّف.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#13402a",
+  "theme_color": "#13402a",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["education", "business", "productivity"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
