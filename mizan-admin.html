@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ميزان — لوحة الإدارة</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=Tajawal:wght@300;400;500;700&display=swap');
+:root{
+  --navy-1:#0f1c30;--navy-2:#09111c;--navy-3:#050a12;
+  --gold:#c9a84c;--gold-light:#e8c97a;
+  --text:#eef2f7;--text-dim:#8294a8;
+  --glass:rgba(255,255,255,.05);--glass-border:rgba(201,168,76,.18);
+  --green:#10b981;--red:#ef4444;--blue:#3b82f6;
+  --tr:all .3s cubic-bezier(.4,0,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:'Tajawal',sans-serif}
+html,body{min-height:100vh;margin:0;padding:0}
+body{background:#050a12;color:var(--text)}
+.admin{display:flex;min-height:100vh}
+/* الشريط الجانبي */
+.side{width:250px;background:linear-gradient(180deg,var(--navy-1),var(--navy-3));border-left:1px solid var(--glass-border);padding:0;position:fixed;top:0;right:0;height:100vh;overflow-y:auto;z-index:50}
+.side::-webkit-scrollbar{width:0}
+.side-head{padding:22px 20px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;gap:12px}
+.side-logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,rgba(201,168,76,.2),rgba(201,168,76,.06));border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center}
+.side-logo svg{width:24px;height:24px;fill:none;stroke:var(--gold-light);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.side-head .n{font-family:'Cairo';font-size:17px;font-weight:800;color:#fff}
+.side-head .s{font-size:10px;color:var(--gold-light)}
+.side-menu{padding:14px 12px}
+.side-item{display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:11px;color:var(--text-dim);font-size:13.5px;font-weight:500;cursor:pointer;transition:var(--tr);margin-bottom:3px;border:1px solid transparent}
+.side-item i{width:20px;text-align:center;font-size:15px}
+.side-item:hover{background:var(--glass);color:var(--text)}
+.side-item.active{background:rgba(201,168,76,.14);border-color:var(--glass-border);color:var(--gold-light)}
+.side-item.active i{color:var(--gold)}
+/* المحتوى */
+.main{flex:1;margin-right:250px;padding:24px;min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.topbar h1{font-family:'Cairo';font-size:24px;font-weight:800;color:#fff}
+.topbar .sub{font-size:13px;color:var(--text-dim);margin-top:2px}
+.admin-badge{display:flex;align-items:center;gap:9px;background:var(--glass);border:1px solid var(--glass-border);padding:8px 16px;border-radius:11px;font-size:13px}
+.admin-badge i{color:var(--gold)}
+.view{display:none}
+.view.active{display:block;animation:fade .4s}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+/* بطاقات الإحصائيات */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.stat{background:linear-gradient(145deg,var(--glass),rgba(255,255,255,.01));border:1px solid var(--glass-border);border-radius:16px;padding:20px;position:relative;overflow:hidden}
+.stat::after{content:'';position:absolute;top:-20px;left:-20px;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,.12),transparent 70%)}
+.stat .ic{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px}
+.stat .ic.gold{background:rgba(201,168,76,.16);color:var(--gold-light)}
+.stat .ic.green{background:rgba(16,185,129,.16);color:var(--green)}
+.stat .ic.blue{background:rgba(59,130,246,.16);color:var(--blue)}
+.stat .ic.red{background:rgba(239,68,68,.16);color:var(--red)}
+.stat .num{font-family:'Cairo';font-size:28px;font-weight:800;color:#fff;line-height:1.2}
+.stat .lbl{font-size:12px;color:var(--text-dim);margin-top:4px}
+.stat .trend{font-size:11px;margin-top:8px;display:flex;align-items:center;gap:4px}
+.stat .trend.up{color:var(--green)}
+.stat .trend.down{color:var(--red)}
+/* الرسوم */
+.charts-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px}
+@media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
+.card{background:linear-gradient(145deg,var(--glass),rgba(255,255,255,.01));border:1px solid var(--glass-border);border-radius:16px;padding:20px}
+.card h3{font-family:'Cairo';font-size:15px;font-weight:700;color:#fff;margin-bottom:18px;display:flex;align-items:center;gap:9px}
+.card h3 i{color:var(--gold)}
+.chart-wrap{position:relative;height:260px}
+.chart-wrap.small{height:240px}
+/* الجداول */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:right;padding:12px 14px;color:var(--gold-light);font-weight:600;border-bottom:1px solid var(--glass-border);white-space:nowrap}
+td{padding:13px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.pill{display:inline-block;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:600}
+.pill.active{background:rgba(16,185,129,.16);color:var(--green)}
+.pill.inactive{background:rgba(239,68,68,.16);color:var(--red)}
+.pill.free{background:rgba(130,148,168,.16);color:var(--text-dim)}
+.pill.basic{background:rgba(59,130,246,.16);color:var(--blue)}
+.pill.pro{background:rgba(201,168,76,.16);color:var(--gold-light)}
+.btn-sm{padding:6px 13px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:12px;font-family:'Tajawal';cursor:pointer;transition:var(--tr)}
+.btn-sm:hover{border-color:var(--gold);color:var(--gold-light)}
+.btn-sm.danger:hover{border-color:var(--red);color:var(--red)}
+/* النماذج والحقول */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;color:var(--gold-light);margin-bottom:7px;font-weight:500}
+.field input,.field textarea,.field select{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--glass-border);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text);font-family:'Tajawal';outline:none;transition:var(--tr)}
+.field input:focus,.field textarea:focus{border-color:rgba(201,168,76,.6)}
+.field textarea{resize:vertical;min-height:80px;line-height:1.6}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#b0913b);border:none;border-radius:10px;padding:12px 22px;font-size:13px;color:var(--navy-1);font-weight:700;font-family:'Cairo';cursor:pointer;transition:var(--tr);display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn-gold:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(201,168,76,.3)}
+.btn-ghost{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:12px 22px;font-size:13px;color:var(--gold-light);font-weight:700;font-family:'Cairo';cursor:pointer;transition:var(--tr)}
+.btn-ghost:hover{background:rgba(201,168,76,.14)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.row2{grid-template-columns:1fr}}
+.editable-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.editable-row{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.2);border:1px solid var(--glass-border);border-radius:10px;padding:10px 14px}
+.editable-row .txt{flex:1;font-size:13px}
+.editable-row .del{color:var(--red);cursor:pointer;font-size:14px;background:none;border:none;padding:4px}
+.add-row{display:flex;gap:10px}
+.add-row input{flex:1}
+.plan-edit{background:rgba(0,0,0,.2);border:1px solid var(--glass-border);border-radius:14px;padding:18px;margin-bottom:14px}
+.plan-edit h4{font-family:'Cairo';font-size:15px;color:var(--gold-light);margin-bottom:14px}
+/* للجوال */
+.menu-toggle{display:none;width:42px;height:42px;border-radius:11px;border:1px solid var(--glass-border);background:var(--glass);color:var(--gold);font-size:18px;cursor:pointer;align-items:center;justify-content:center}
+@media(max-width:768px){
+  .side{right:-260px;transition:right .3s;width:250px}
+  .side.open{right:0}
+  .main{margin-right:0 !important;padding:16px;width:100%}
+  .menu-toggle{display:flex}
+  .stats-grid{grid-template-columns:1fr 1fr;gap:12px}
+  .charts-grid{grid-template-columns:1fr !important}
+  .topbar h1{font-size:19px}
+}
+.overlay-m{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:45}
+.overlay-m.open{display:block}
+</style>
+</head>
+<body>
+<div id="loginGate" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#0f1c30,#060c16);display:flex;align-items:center;justify-content:center;font-family:Tahoma,Arial,sans-serif">
+  <div style="background:rgba(20,35,58,.6);border:1px solid rgba(201,168,76,.4);border-radius:18px;padding:42px 36px;width:340px;max-width:90%;text-align:center;backdrop-filter:blur(10px)">
+    <div style="font-size:34px;margin-bottom:6px">&#9878;</div>
+    <h2 style="color:#e8c97a;margin:0 0 4px;font-size:20px">ميزان — لوحة الإدارة</h2>
+    <p style="color:#8aa0bf;font-size:13px;margin:0 0 22px">أدخل كلمة مرور المسؤول للدخول</p>
+    <input id="gatePass" type="password" placeholder="كلمة المرور" style="width:100%;box-sizing:border-box;padding:13px 14px;border-radius:10px;border:1px solid rgba(201,168,76,.35);background:rgba(6,12,22,.6);color:#fff;font-size:15px;text-align:center;margin-bottom:14px" onkeydown="if(event.key==='Enter')doLogin()">
+    <div id="gateErr" style="color:#e57373;font-size:13px;margin-bottom:12px;min-height:18px"></div>
+    <button onclick="doLogin()" id="gateBtn" style="width:100%;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,#e8c97a,#c9a84c);color:#0f1c30;font-size:15px;font-weight:bold;cursor:pointer">دخول</button>
+  </div>
+</div>
+<div class="admin">
+  <div class="overlay-m" id="overlayM" onclick="toggleSide()"></div>
+  <!-- الشريط الجانبي -->
+  <aside class="side" id="side">
+    <div class="side-head">
+      <div class="side-logo"><svg viewBox="0 0 38 38"><path d="M19 5v28M10 33h18"/><g><path d="M6 10h26"/><path d="M6 10v5a11 11 0 0 0 5 5 11 11 0 0 0 5-5v-5"/><path d="M22 10v5a11 11 0 0 0 5 5 11 11 0 0 0 5-5v-5"/></g></svg></div>
+      <div><div class="n">ميزان</div><div class="s">لوحة الإدارة</div></div>
+    </div>
+    <div class="side-menu">
+      <div class="side-item active" data-v="dashboard" onclick="showView('dashboard',this)"><i class="fa-solid fa-chart-line"></i><span>لوحة المعلومات</span></div>
+      <div class="side-item" data-v="users" onclick="showView('users',this)"><i class="fa-solid fa-users"></i><span>المستخدمون والاشتراكات</span></div>
+      <div class="side-item" data-v="plans" onclick="showView('plans',this)"><i class="fa-solid fa-crown"></i><span>الباقات والأسعار</span></div>
+      
+      <div class="side-item" data-v="chips" onclick="showView('chips',this)"><i class="fa-solid fa-bolt"></i><span>الأسئلة المقترحة</span></div>
+      <div class="side-item" data-v="faq" onclick="showView('faq',this)"><i class="fa-solid fa-circle-question"></i><span>الأسئلة الشائعة</span></div>
+      <div class="side-item" data-v="ticker" onclick="showView('ticker',this)"><i class="fa-solid fa-bullhorn"></i><span>الشريط المتحرك</span></div>
+      
+      
+    </div>
+  </aside>
+  <!-- المحتوى -->
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:14px">
+        <button class="menu-toggle" onclick="toggleSide()"><i class="fa-solid fa-bars"></i></button>
+        <div><h1 id="viewTitle">لوحة المعلومات</h1><div class="sub" id="viewSub">نظرة شاملة على أداء المنصة</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:stretch;gap:8px"><div class="admin-badge"><i class="fa-solid fa-user-shield"></i><span>المدير</span></div><div class="admin-badge" style="cursor:pointer;justify-content:center" onclick="downloadExcel()"><i class="fa-solid fa-file-excel"></i><span>تحميل Excel</span></div></div>
+    </div>
+
+    <!-- لوحة المعلومات -->
+    <div class="view active" id="view-dashboard">
+      <div class="stats-grid">
+        <div class="stat"><div class="ic blue"><i class="fa-solid fa-users"></i></div><div class="num" id="s-users">0</div><div class="lbl">إجمالي المستخدمين</div></div>
+        <div class="stat"><div class="ic gold"><i class="fa-solid fa-crown"></i></div><div class="num" id="s-subs">0</div><div class="lbl">المشتركون المدفوعون</div></div>
+        <div class="stat"><div class="ic green"><i class="fa-solid fa-sack-dollar"></i></div><div class="num" id="s-revenue">0</div><div class="lbl">الإيرادات الشهرية (ريال)</div></div>
+        <div class="stat"><div class="ic red"><i class="fa-solid fa-inbox"></i></div><div class="num" id="s-consults">0</div><div class="lbl">استشارات جديدة</div></div>
+      </div>
+      <div class="charts-grid">
+        <div class="card"><h3><i class="fa-solid fa-chart-area"></i> نمو المشتركين والإيرادات (آخر 6 أشهر)</h3><div class="chart-wrap"><canvas id="growthChart"></canvas></div></div>
+        <div class="card"><h3><i class="fa-solid fa-chart-pie"></i> توزيع الباقات</h3><div class="chart-wrap small"><canvas id="plansChart"></canvas></div></div>
+      </div>
+      <div class="charts-grid" style="grid-template-columns:1fr 1fr">
+        <div class="card"><h3><i class="fa-solid fa-chart-column"></i> استخدام الأقسام</h3><div class="chart-wrap small"><canvas id="usageChart"></canvas></div></div>
+        <div class="card"><h3><i class="fa-solid fa-chart-line"></i> الاستشارات اليومية (آخر 7 أيام)</h3><div class="chart-wrap small"><canvas id="consultChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- المستخدمون -->
+    <div class="view" id="view-users">
+      <div class="card">
+        <h3><i class="fa-solid fa-users"></i> إدارة المستخدمين والاشتراكات</h3>
+        <div class="table-wrap"><table id="usersTable"><thead><tr><th>المستخدم</th><th>البريد</th><th>الباقة</th><th>الحالة</th><th>تاريخ الاشتراك</th><th>إجراء</th></tr></thead><tbody id="usersBody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- الباقات -->
+    <div class="view" id="view-plans">
+      <div class="card"><h3><i class="fa-solid fa-crown"></i> تعديل الباقات والأسعار</h3><div id="plansEditor"></div><button class="btn-gold" onclick="savePlans()"><i class="fa-solid fa-floppy-disk"></i> حفظ الأسعار</button></div>
+    </div>
+
+    <!-- الاستشارات الواردة -->
+    
+
+    <!-- الأسئلة المقترحة -->
+    <div class="view" id="view-chips">
+      <div class="card"><h3><i class="fa-solid fa-bolt"></i> الأسئلة المقترحة في المرشد</h3><div class="editable-list" id="chipsList"></div><div class="add-row"><input id="newChip" placeholder="سؤال مقترح جديد..."><button class="btn-gold" onclick="addChip()"><i class="fa-solid fa-plus"></i> إضافة</button></div></div>
+    </div>
+
+    <!-- الأسئلة الشائعة -->
+    <div class="view" id="view-faq">
+      <div class="card"><h3><i class="fa-solid fa-circle-question"></i> الأسئلة الشائعة</h3><div class="editable-list" id="faqList"></div><div class="field"><label>سؤال جديد</label><input id="newFaqQ" placeholder="السؤال..."></div><div class="field"><label>الإجابة</label><textarea id="newFaqA" placeholder="الإجابة..."></textarea></div><button class="btn-gold" onclick="addFaq()"><i class="fa-solid fa-plus"></i> إضافة سؤال</button></div>
+    </div>
+
+    <!-- الشريط المتحرك -->
+    <div class="view" id="view-ticker">
+      <div class="card"><h3><i class="fa-solid fa-bullhorn"></i> رسائل الشريط المتحرك</h3><div class="editable-list" id="tickerList"></div><div class="add-row"><input id="newTicker" placeholder="رسالة جديدة..."><button class="btn-gold" onclick="addTicker()"><i class="fa-solid fa-plus"></i> إضافة</button></div></div>
+    </div>
+
+    <!-- ردود المرشد -->
+    
+
+    <!-- الدستور التوجيهي -->
+    
+  </main>
+</div>
+
+<script>
+/* ============ بيانات تجريبية (ديمو) ============ */
+var DATA={
+  stats:{users:1240,subs:312,revenue:13680,consults:47},
+  growth:{months:["يناير","فبراير","مارس","أبريل","مايو","يونيو"],subs:[45,78,120,180,250,312],revenue:[1300,2900,5200,8100,11200,13680]},
+  plans:{free:928,basic:198,pro:114},
+  usage:{labels:["المرشد","العقود","المحلل","الاستشارات","الأنظمة"],values:[420,180,95,140,60]},
+  consultDaily:{days:["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"],values:[8,12,6,15,9,11,7]}
+};
+var users=[
+  {name:"محمد العتيبي",email:"m.otaibi@mail.com",plan:"pro",active:true,date:"2026-05-12"},
+  {name:"سارة القحطاني",email:"sara.q@mail.com",plan:"basic",active:true,date:"2026-05-20"},
+  {name:"عبدالله الشمري",email:"a.shammari@mail.com",plan:"free",active:true,date:"2026-06-01"},
+  {name:"نورة الدوسري",email:"noura.d@mail.com",plan:"pro",active:false,date:"2026-04-18"},
+  {name:"خالد الحربي",email:"k.harbi@mail.com",plan:"basic",active:true,date:"2026-06-08"}
+];
+var plans=[
+  {id:"free",name:"المجانية",price:0,feats:["تجربة المرشد القانوني","تصفّح الأقسام"]},
+  {id:"basic",name:"الأساسية",price:29,feats:["50 رسالة للمرشد","استشارتان","لائحة واحدة"]},
+  {id:"pro",name:"المتقدمة",price:59,feats:["محادثة غير محدودة","3 استشارات","3 لوائح"]}
+];
+var chips=["كيف أعترض على مخالفة ساهر المرورية؟","ما حقي في نفقة وحضانة الأطفال؟","كيف أوثّق عقد إيجار عبر منصة إيجار؟","هل فصلي من العمل يُعد فصلاً تعسفياً؟","كيف أحسب مكافأة نهاية الخدمة؟"];
+var faqs=[
+  {q:"ما هو تطبيق ميزان؟",a:"دليل قانوني سعودي ذكي يرشدك في الأنظمة والإجراءات."},
+  {q:"هل ميزان بديل عن المحامي؟",a:"لا، ميزان أداة استرشادية توعوية وليس بديلاً عن مختص مرخّص."}
+];
+var tickerMsgs=["ميزان دليلك الاسترشادي الذكي للأنظمة السعودية.","وثّق جميع اتفاقاتك كتابةً.","اقرأ كل بنود العقد قبل التوقيع.","الشيك بدون رصيد جريمة موجبة للعقوبة."];
+var knowledge=[
+  {keys:"مرور, مخالفة, رخصة",answer:"عقوبة القيادة بدون رخصة: غرامة 500-900 ريال."},
+  {keys:"إيجار, عقد",answer:"توثيق عقد الإيجار يتم عبر منصة إيجار الرسمية."}
+];
+
+
+/* تحميل من localStorage */
+/* ============ الاتصال بالخادم وقاعدة البيانات ============ */
+var PROXY_URL="https://lzfgjvafmvofwjiyvelq.supabase.co/functions/v1/rapid-function";
+var SB_KEY="sb_publishable_YZzzqNIjBGtAbD1IZAiY-w_gO93vuH5";
+var ADMIN_PASS_CACHE="";
+
+/* تسجيل الدخول: يتحقق فعلياً من كلمة المرور مع الخادم مرة واحدة */
+function doLogin(){
+  var p=document.getElementById("gatePass").value;
+  var errEl=document.getElementById("gateErr");
+  var btn=document.getElementById("gateBtn");
+  if(!p){errEl.textContent="أدخل كلمة المرور";return;}
+  btn.textContent="جارٍ التحقق...";btn.disabled=true;errEl.textContent="";
+  fetch(PROXY_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+SB_KEY,"apikey":SB_KEY},
+    body:JSON.stringify({action:"get_stats",pass:p})})
+  .then(function(r){return r.json()})
+  .then(function(d){
+    if(d.stats){
+      // كلمة صحيحة: نحفظها للجلسة ونفتح اللوحة
+      ADMIN_PASS_CACHE=p;
+      document.getElementById("loginGate").style.display="none";
+      fillStats(d.stats);
+    }else{
+      errEl.textContent="كلمة المرور غير صحيحة";
+      btn.textContent="دخول";btn.disabled=false;
+    }
+  })
+  .catch(function(){
+    errEl.textContent="تعذّر الاتصال بالخادم. تأكد من الإنترنت.";
+    btn.textContent="دخول";btn.disabled=false;
+  });
+}
+
+/* ملء بطاقات الإحصائيات */
+function fillStats(s){
+  var setNum=function(id,val){var el=document.getElementById(id);if(el)el.textContent=val;};
+  setNum("s-users",s.users||0);
+  setNum("s-subs",s.subscriptions||0);
+  setNum("s-revenue",(s.revenue||0).toLocaleString("ar-SA"));
+  setNum("s-consults",0);
+}
+
+/* كلمة المرور محفوظة من الدخول، لا تُطلب مجدداً */
+function ensureAdminPass(){ return ADMIN_PASS_CACHE; }
+
+/* حفظ محتوى في قاعدة البيانات عبر الخادم */
+function saveContent(key,value,okMsg){
+  var pass=ensureAdminPass();
+  if(!pass){alert("لم تُدخل كلمة المرور. لم يُحفظ.");return;}
+  fetch(PROXY_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+SB_KEY,"apikey":SB_KEY},
+    body:JSON.stringify({action:"save_content",pass:pass,key:key,value:value})})
+  .then(function(r){return r.json()})
+  .then(function(d){
+    if(d.ok){alert(okMsg||"تم الحفظ بنجاح");}
+    else{var em=(typeof d.error==="string")?d.error:(d.error&&d.error.message?d.error.message:"تأكد من كلمة المرور أو الاتصال");if(em.indexOf("مرور")>-1)ADMIN_PASS_CACHE="";alert("فشل الحفظ: "+em);}
+  })
+  .catch(function(){alert("تعذّر الاتصال بالخادم. تأكد من الإنترنت.");});
+}
+
+/* قراءة الإحصائيات الحقيقية من قاعدة البيانات */
+function loadRealStats(){
+  if(!ADMIN_PASS_CACHE)return;
+  fetch(PROXY_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+SB_KEY,"apikey":SB_KEY},
+    body:JSON.stringify({action:"get_stats",pass:ADMIN_PASS_CACHE})})
+  .then(function(r){return r.json()})
+  .then(function(d){ if(d.stats)fillStats(d.stats); })
+  .catch(function(){});
+}
+
+/* قراءة كل المحتوى من قاعدة البيانات */
+function loadContentFromDB(cb){
+  fetch(PROXY_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+SB_KEY,"apikey":SB_KEY},
+    body:JSON.stringify({action:"get_content"})})
+  .then(function(r){return r.json()})
+  .then(function(d){
+    if(d.content){
+      if(d.content.plans)plans=d.content.plans;
+      if(d.content.chips)chips=d.content.chips;
+      if(d.content.faqs)faqs=d.content.faqs;
+      if(d.content.ticker)tickerMsgs=d.content.ticker;
+    }
+    if(cb)cb();
+  })
+  .catch(function(){if(cb)cb();});
+}
+
+function load(){
+  try{
+    if(localStorage.getItem('mz_plans'))plans=JSON.parse(localStorage.getItem('mz_plans'));
+    if(localStorage.getItem('mz_chips'))chips=JSON.parse(localStorage.getItem('mz_chips'));
+    if(localStorage.getItem('mz_faqs'))faqs=JSON.parse(localStorage.getItem('mz_faqs'));
+    if(localStorage.getItem('mz_ticker'))tickerMsgs=JSON.parse(localStorage.getItem('mz_ticker'));
+  }catch(e){}
+}
+load();
+/* قراءة المحتوى الحقيقي من قاعدة البيانات ثم تحديث العرض */
+loadContentFromDB(function(){
+  try{ if(typeof renderPlans==="function")renderPlans(); }catch(e){}
+  try{ if(typeof renderChips==="function")renderChips(); }catch(e){}
+  try{ if(typeof renderFaq==="function")renderFaq(); }catch(e){}
+  try{ if(typeof renderTicker==="function")renderTicker(); }catch(e){}
+});
+
+/* ============ التنقل ============ */
+function showView(name,el){
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active')});
+  document.getElementById('view-'+name).classList.add('active');
+  
+  document.querySelectorAll('.side-item').forEach(function(s){s.classList.remove('active')});
+  if(el)el.classList.add('active');
+  var titles={dashboard:["لوحة المعلومات","نظرة شاملة على أداء المنصة"],users:["المستخدمون والاشتراكات","إدارة حسابات المستخدمين"],plans:["الباقات والأسعار","تعديل باقات الاشتراك"],chips:["الأسئلة المقترحة","تحكم في أزرار المرشد"],faq:["الأسئلة الشائعة","إدارة الأسئلة والأجوبة"],ticker:["الشريط المتحرك","رسائل الشريط الإخباري"],knowledge:["ردود المرشد","قاعدة المعرفة القانونية"],prompt:["الدستور التوجيهي","توجيه الذكاء الاصطناعي"]};
+  document.getElementById('viewTitle').textContent=titles[name][0];
+  document.getElementById('viewSub').textContent=titles[name][1];
+  if(window.innerWidth<=768)toggleSide(true);
+}
+function toggleSide(forceClose){
+  var s=document.getElementById('side');var o=document.getElementById('overlayM');
+  if(forceClose){s.classList.remove('open');o.classList.remove('open');return}
+  s.classList.toggle('open');o.classList.toggle('open');
+}
+
+/* ============ الإحصائيات المتحركة ============ */
+function animateNum(id,target){
+  var el=document.getElementById(id);var cur=0;var step=Math.ceil(target/45);
+  var t=setInterval(function(){cur+=step;if(cur>=target){cur=target;clearInterval(t)}el.textContent=cur.toLocaleString('ar-SA')},22);
+}
+function initStats(){
+  animateNum('s-users',DATA.stats.users);animateNum('s-subs',DATA.stats.subs);
+  animateNum('s-revenue',DATA.stats.revenue);animateNum('s-consults',DATA.stats.consults);
+}
+
+/* ============ الرسوم البيانية ============ */
+var charts={};
+function initCharts(){
+  Chart.defaults.color='#8294a8';Chart.defaults.font.family='Tajawal';Chart.defaults.font.size=12;
+  var gold='#c9a84c',green='#10b981',blue='#3b82f6',grid='rgba(255,255,255,.05)';
+  // نمو
+  var g=document.getElementById('growthChart').getContext('2d');
+  var grad=g.createLinearGradient(0,0,0,260);grad.addColorStop(0,'rgba(201,168,76,.35)');grad.addColorStop(1,'rgba(201,168,76,0)');
+  charts.growth=new Chart(g,{type:'line',data:{labels:DATA.growth.months,datasets:[{label:'المشتركون',data:DATA.growth.subs,borderColor:gold,backgroundColor:grad,fill:true,tension:.4,borderWidth:3,pointBackgroundColor:gold,pointRadius:4},{label:'الإيرادات (ريال)',data:DATA.growth.revenue,borderColor:green,backgroundColor:'transparent',tension:.4,borderWidth:2,pointBackgroundColor:green,pointRadius:3,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{usePointStyle:true,padding:16}}},scales:{x:{grid:{color:grid}},y:{grid:{color:grid},position:'right'},y1:{grid:{display:false},position:'left'}}}});
+  // الباقات
+  var p=document.getElementById('plansChart').getContext('2d');
+  charts.plans=new Chart(p,{type:'doughnut',data:{labels:['المجانية','الأساسية','المتقدمة'],datasets:[{data:[DATA.plans.free,DATA.plans.basic,DATA.plans.pro],backgroundColor:['rgba(130,148,168,.6)',blue,gold],borderColor:'#0f1c30',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{usePointStyle:true,padding:14}}}}});
+  // الاستخدام
+  var u=document.getElementById('usageChart').getContext('2d');
+  charts.usage=new Chart(u,{type:'bar',data:{labels:DATA.usage.labels,datasets:[{label:'مرات الاستخدام',data:DATA.usage.values,backgroundColor:gold,borderRadius:8,barThickness:30}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:grid}}}}});
+  // الاستشارات اليومية
+  var co=document.getElementById('consultChart').getContext('2d');
+  charts.consult=new Chart(co,{type:'line',data:{labels:DATA.consultDaily.days,datasets:[{label:'استشارات',data:DATA.consultDaily.values,borderColor:blue,backgroundColor:'rgba(59,130,246,.12)',fill:true,tension:.4,borderWidth:2,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:grid}}}}});
+}
+
+/* ============ الجداول ============ */
+function planPill(p){var m={free:['free','مجانية'],basic:['basic','أساسية'],pro:['pro','متقدمة']};return '<span class="pill '+m[p][0]+'">'+m[p][1]+'</span>'}
+function renderUsers(){
+  var b=document.getElementById('usersBody');b.innerHTML='';
+  users.forEach(function(u,i){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+u.name+'</td><td style="color:var(--text-dim)">'+u.email+'</td><td>'+planPill(u.plan)+'</td><td><span class="pill '+(u.active?'active':'inactive')+'">'+(u.active?'نشط':'موقوف')+'</span></td><td style="color:var(--text-dim)">'+u.date+'</td><td><button class="btn-sm '+(u.active?'danger':'')+'" onclick="toggleUser('+i+')">'+(u.active?'إيقاف':'تفعيل')+'</button></td>';
+    b.appendChild(tr);
+  });
+}
+function toggleUser(i){users[i].active=!users[i].active;renderUsers()}
+
+/* ============ الباقات ============ */
+function renderPlans(){
+  var box=document.getElementById('plansEditor');box.innerHTML='';
+  plans.forEach(function(pl,i){
+    var feats=pl.feats.map(function(f){return f}).join('\n');
+    var div=document.createElement('div');div.className='plan-edit';
+    div.innerHTML='<h4>'+pl.name+'</h4><div class="row2"><div class="field"><label>اسم الباقة</label><input value="'+pl.name+'" onchange="plans['+i+'].name=this.value"></div><div class="field"><label>السعر (ريال/شهر)</label><input type="number" value="'+pl.price+'" onchange="plans['+i+'].price=parseInt(this.value)||0"></div></div><div class="field"><label>المميزات (كل ميزة في سطر)</label><textarea onchange="plans['+i+'].feats=this.value.split(String.fromCharCode(10)).filter(function(x){return x.trim()})">'+feats+'</textarea></div>';
+    box.appendChild(div);
+  });
+}
+function savePlans(){saveContent('plans',plans,'تم حفظ الباقات والأسعار')}
+
+/* ============ القوائم القابلة للتعديل ============ */
+function renderEditable(listId,arr,onDel){
+  var box=document.getElementById(listId);box.innerHTML='';
+  arr.forEach(function(item,i){
+    var row=document.createElement('div');row.className='editable-row';
+    var txt=typeof item==='string'?item:(item.q||item.keys);
+    row.innerHTML='<span class="txt">'+txt+'</span><button class="del" onclick="'+onDel+'('+i+')"><i class="fa-solid fa-trash"></i></button>';
+    box.appendChild(row);
+  });
+}
+function renderChips(){renderEditable('chipsList',chips,'delChip')}
+function addChip(){var v=document.getElementById('newChip').value.trim();if(!v)return;chips.push(v);saveChips();renderChips();document.getElementById('newChip').value=''}
+function delChip(i){chips.splice(i,1);saveChips();renderChips()}
+function saveChips(){saveContent('chips',chips,'تم حفظ الأسئلة المقترحة')}
+
+function renderFaq(){renderEditable('faqList',faqs,'delFaq')}
+function addFaq(){var q=document.getElementById('newFaqQ').value.trim();var a=document.getElementById('newFaqA').value.trim();if(!q||!a)return;faqs.push({q:q,a:a});saveFaq();renderFaq();document.getElementById('newFaqQ').value='';document.getElementById('newFaqA').value=''}
+function delFaq(i){faqs.splice(i,1);saveFaq();renderFaq()}
+function saveFaq(){saveContent('faqs',faqs,'تم حفظ الأسئلة الشائعة')}
+
+function renderTicker(){renderEditable('tickerList',tickerMsgs,'delTicker')}
+function addTicker(){var v=document.getElementById('newTicker').value.trim();if(!v)return;tickerMsgs.push(v);saveTicker();renderTicker();document.getElementById('newTicker').value=''}
+function delTicker(i){tickerMsgs.splice(i,1);saveTicker();renderTicker()}
+function saveTicker(){saveContent('ticker',tickerMsgs,'تم حفظ رسائل الشريط')}
+
+
+
+
+
+
+/* ============ الدستور ============ */
+
+
+
+/* ============ تحميل كل البيانات في ملف Excel واحد ============ */
+function downloadExcel(){
+  var rows=[];
+  // الإحصائيات
+  rows.push(["===== الإحصائيات العامة ====="]);
+  rows.push(["البند","القيمة"]);
+  rows.push(["إجمالي المستخدمين",DATA.stats.users]);
+  rows.push(["المشتركون المدفوعون",DATA.stats.subs]);
+  rows.push(["الإيرادات الشهرية (ريال)",DATA.stats.revenue]);
+  rows.push(["استشارات جديدة",DATA.stats.consults]);
+  rows.push([""]);
+  // نمو المشتركين والإيرادات
+  rows.push(["===== نمو المشتركين والإيرادات (آخر 6 أشهر) ====="]);
+  rows.push(["الشهر","المشتركون","الإيرادات"]);
+  for(var i=0;i<DATA.growth.months.length;i++)rows.push([DATA.growth.months[i],DATA.growth.subs[i],DATA.growth.revenue[i]]);
+  rows.push([""]);
+  // توزيع الباقات
+  rows.push(["===== توزيع الباقات ====="]);
+  rows.push(["الباقة","عدد المشتركين"]);
+  rows.push(["المجانية",DATA.plans.free]);
+  rows.push(["الأساسية",DATA.plans.basic]);
+  rows.push(["المتقدمة",DATA.plans.pro]);
+  rows.push([""]);
+  // المستخدمون
+  rows.push(["===== المستخدمون والاشتراكات ====="]);
+  rows.push(["الاسم","البريد","الباقة","الحالة","تاريخ الاشتراك"]);
+  var planNames={free:"مجانية",basic:"أساسية",pro:"متقدمة"};
+  users.forEach(function(u){rows.push([u.name,u.email,planNames[u.plan],u.active?"نشط":"موقوف",u.date])});
+  rows.push([""]);
+  // الأسعار الحالية
+  rows.push(["===== الباقات والأسعار ====="]);
+  rows.push(["الباقة","السعر (ريال/شهر)"]);
+  plans.forEach(function(p){rows.push([p.name,p.price])});
+
+  // تحويل لـ CSV (يفتح في Excel)
+  var csv=rows.map(function(r){return r.map(function(cell){var s=String(cell).replace(/"/g,'""');return '"'+s+'"'}).join(",")}).join("\n");
+  var blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");a.href=url;
+  var today=new Date().toISOString().slice(0,10);
+  a.download="بيانات-ميزان-"+today+".csv";
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+/* ============ الإقلاع ============ */
+window.addEventListener('load',function(){
+  renderUsers();
+  renderPlans();
+  renderChips();
+  renderFaq();
+  renderTicker();
+  initStats();
+  try{initCharts()}catch(e){console.log('Chart.js لم تُحمّل بعد')}
+});
+</script>
+</body>
+</html>
