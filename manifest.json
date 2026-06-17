@@ -1,0 +1,26 @@
+{
+  "name": "ميزان — المرشد القانوني الذكي",
+  "short_name": "ميزان",
+  "description": "دليلك القانوني السعودي الشامل — مرشد ذكي، صانع عقود، محلل بنود",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050a12",
+  "theme_color": "#0f1c30",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
