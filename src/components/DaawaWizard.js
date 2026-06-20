@@ -22,8 +22,8 @@ import AuthScreen from "../screens/AuthScreen";
 const { width } = Dimensions.get("window");
 
 export default function DaawaWizard({ onClose, onSaveSuccess }) {
-  const { colors, fontScale, lang } = useTheme();
-  const styles = makeStyles(colors, fontScale);
+  const { colors, fontScale, lang, dir } = useTheme();
+  const styles = makeStyles(colors, fontScale, dir);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
@@ -276,7 +276,7 @@ export default function DaawaWizard({ onClose, onSaveSuccess }) {
   );
 }
 
-function makeStyles(colors, fontScale) {
+function makeStyles(colors, fontScale, dir = { isRTL: true, row: "row-reverse", rowStart: "flex-end" }) {
   return StyleSheet.create({
   wizardOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 1000, backgroundColor: "rgba(10,35,66,0.45)", justifyContent: "flex-end" },
   wizardContainer: { width: "100%", height: "88%", borderTopLeftRadius: 32, borderTopRightRadius: 32, borderWidth: 1, borderColor: colors.border, overflow: "hidden", backgroundColor: colors.bgPure },
@@ -294,9 +294,9 @@ function makeStyles(colors, fontScale) {
   wizardScroll: { padding: 20, paddingBottom: 40 },
   stepContent: { width: "100%", alignItems: "flex-end" },
   stepLabel: { fontFamily: "Cairo_800ExtraBold", fontSize: 15.5, color: colors.onyx, marginBottom: 16, textAlign: "right", width: "100%" },
-  radioOption: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", width: "100%", height: 50, backgroundColor: colors.bg, borderRadius: 14, paddingHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.borderSoft },
+  radioOption: { flexDirection: dir.row, alignItems: "center", justifyContent: dir.rowStart, width: "100%", height: 50, backgroundColor: colors.bg, borderRadius: 14, paddingHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.borderSoft },
   radioOptionActive: { borderColor: colors.royal, backgroundColor: colors.royalSoft },
-  radioText: { fontFamily: "Tajawal_500Medium", fontSize: 13.5, color: colors.textDim, marginRight: 12 },
+  radioText: { fontFamily: "Tajawal_500Medium", fontSize: 13.5, color: colors.textDim, marginHorizontal: 12 },
   radioTextActive: { color: colors.royal, fontFamily: "Tajawal_700Bold" },
   radioCircle: { width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: colors.textMuted },
   radioCircleActive: { borderColor: colors.royal, backgroundColor: colors.royal },
@@ -311,7 +311,7 @@ function makeStyles(colors, fontScale) {
   saveLibraryButton: { width: "100%", height: 50, borderRadius: 14, overflow: "hidden" },
   saveGradient: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: colors.royal },
   saveText: { fontFamily: "Cairo_800ExtraBold", fontSize: 14, color: colors.white },
-  wizardFooter: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", padding: 20, borderTopWidth: 1, borderColor: colors.borderSoft, paddingBottom: Platform.OS === "ios" ? 34 : 20 },
+  wizardFooter: { flexDirection: dir.row, justifyContent: "space-between", alignItems: "center", padding: 20, borderTopWidth: 1, borderColor: colors.borderSoft, paddingBottom: Platform.OS === "ios" ? 34 : 20 },
   nextButton: { height: 46, paddingHorizontal: 28, backgroundColor: colors.royal, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   nextButtonText: { fontFamily: "Cairo_800ExtraBold", fontSize: 13.5, color: colors.white },
   backButton: { height: 46, paddingHorizontal: 20, backgroundColor: "transparent", alignItems: "center", justifyContent: "center" },
