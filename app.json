@@ -59,7 +59,8 @@
         }
       ],
       "expo-secure-store",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      "./plugins/withIapStore"
     ],
     "extra": {
       "eas": {
