@@ -1,18 +1,18 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Dimensions, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, Dimensions, ActivityIndicator, Alert, Keyboard,
 } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { streamAI, logActivity, loadChat, saveChat, clearChat, toHistory, parseTags } from "../lib/api";
-import { exportAsPdf } from "../lib/exporter";
 import { speak, stopSpeaking } from "../lib/speech";
 import { startListening, stopListening, destroyVoice, isVoiceAvailable } from "../lib/voiceInput";
 import { captureFromCamera, pickFromGallery } from "../lib/imageCapture";
 import { checkCanChat, recordUsage } from "../lib/usageLimits";
-import { recordQuestionStat, recordDocumentStat } from "../lib/localStats";
+import { recordQuestionStat } from "../lib/localStats";
 import { QUICK_EXAMPLES, RADIUS } from "../lib/theme";
 import { useTheme, scaled } from "../lib/ThemeContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { t } from "../lib/i18n";
 
 const { width } = Dimensions.get("window");
@@ -26,7 +26,8 @@ const CONF_STYLE = {
 
 export default function SectionScreen({ route, navigation }) {
   const { colors, fontScale, lang , dir } = useTheme();
-  const styles = makeStyles(colors, fontScale, dir);
+  const insets = useSafeAreaInsets();
+  const styles = makeStyles(colors, fontScale, dir, insets);
   const { section } = route.params || {};
   const sectionId = section?.id || "guidance";
   // عنوان القسم المترجم: من مفتاح title_<id> إن وُجد، وإلا الاسم الأصلي
@@ -39,6 +40,7 @@ export default function SectionScreen({ route, navigation }) {
 
   const [messages, setMessages] = useState([welcomeMsg]);
   const [inputText, setInputText] = useState("");
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -50,6 +52,15 @@ export default function SectionScreen({ route, navigation }) {
 
   useEffect(() => {
     return () => { stopSpeaking(); destroyVoice(); };
+  }, []);
+
+  // مستمع لوحة المفاتيح: عند الفتح يلتصق المربع فوق الكيبورد، وعند الإغلاق يعود فوق القائمة السفلية
+  useEffect(() => {
+    const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showSub = Keyboard.addListener(showEvt, () => setKeyboardOpen(true));
+    const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardOpen(false));
+    return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
   const toggleListening = async () => {
@@ -205,13 +216,6 @@ export default function SectionScreen({ route, navigation }) {
     );
   };
 
-  const exportMessage = async (text) => {
-    const docTitle = `${sectionTitle} - ${lang==="en"?"Advisory output":"مخرج استرشادي"}`;
-    const res = await exportAsPdf(docTitle, text);
-    if (res.ok) recordDocumentStat();
-    else Alert.alert(t("export_fail_title", lang), t("export_fail_msg", lang));
-  };
-
   const confirmClear = () => {
     if (streaming || loading) return;
     Alert.alert(
@@ -229,7 +233,11 @@ export default function SectionScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={0} style={styles.innerContainer}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.bottom : 0}
+        style={styles.innerContainer}
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <FontAwesome5 name="arrow-right" size={17} color={colors.platinum} />
@@ -248,10 +256,24 @@ export default function SectionScreen({ route, navigation }) {
         >
           {messages.map((msg) => {
             const isStreamingThis = streaming && msg.id === streamingIdRef.current;
-            const parsed = msg.isBot && msg.id !== "welcome" ? parseTags(msg.text) : null;
+            const isWelcome = msg.id === "welcome";
+            const parsed = msg.isBot && !isWelcome ? parseTags(msg.text) : null;
             const displayText = parsed ? parsed.clean : msg.text;
             const conf = parsed && parsed.confidence ? CONF_STYLE[parsed.confidence] : null;
-            const canExport = msg.isBot && msg.id !== "welcome" && displayText && displayText.length > 120 && !isStreamingThis;
+            const canExport = msg.isBot && !isWelcome && displayText && displayText.length > 120 && !isStreamingThis;
+
+            // الرسالة الترحيبية: مربع فاخر مميّز يناسب هوية التطبيق
+            if (isWelcome) {
+              return (
+                <View key={msg.id} style={styles.welcomeCard}>
+                  <View style={styles.welcomeIconWrap}>
+                    <FontAwesome5 name="balance-scale" size={20} color={colors.platinum} />
+                  </View>
+                  <Text style={styles.welcomeText}>{displayText}</Text>
+                </View>
+              );
+            }
+
             return (
               <View key={msg.id} style={[styles.messageRow, msg.isBot ? styles.botRow : styles.userRow]}>
                 <View style={[styles.avatarBox, msg.isBot ? styles.botAvatar : styles.userAvatar]}>
@@ -282,10 +304,6 @@ export default function SectionScreen({ route, navigation }) {
                   </View>
                   {canExport && (
                     <View style={styles.actionRow}>
-                      <TouchableOpacity style={styles.exportBtn} activeOpacity={0.8} onPress={() => exportMessage(displayText)}>
-                        <FontAwesome5 name="file-download" size={11} color={colors.royal} />
-                        <Text style={styles.exportBtnText}>{t("save_doc", lang)}</Text>
-                      </TouchableOpacity>
                       <TouchableOpacity style={styles.exportBtn} activeOpacity={0.8} onPress={() => toggleSpeak(msg.id, displayText)}>
                         <FontAwesome5 name={speakingId === msg.id ? "stop" : "volume-up"} size={11} color={colors.royal} />
                         <Text style={styles.exportBtnText}>{speakingId === msg.id ? (lang==="en"?"Stop":"إيقاف") : t("listen", lang)}</Text>
@@ -310,7 +328,7 @@ export default function SectionScreen({ route, navigation }) {
           )}
         </ScrollView>
 
-        <View style={styles.inputWrapper}>
+        <View style={[styles.inputWrapper, keyboardOpen && { marginBottom: 10 }]}>
           {streaming ? (
             <TouchableOpacity style={styles.stopButton} activeOpacity={0.85} onPress={stopStreaming}>
               <FontAwesome5 name="stop" size={14} color={colors.white} />
@@ -342,9 +360,10 @@ export default function SectionScreen({ route, navigation }) {
   );
 }
 
-function makeStyles(colors, fontScale, dir) {
+function makeStyles(colors, fontScale, dir, insets = { bottom: 0 }) {
+  const TAB_BAR_HEIGHT = 64 + insets.bottom; // ارتفاع الشريط السفلي الفعلي (ديناميكي)
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.bg, paddingBottom: 100 },
+    container: { flex: 1, backgroundColor: colors.bg },
     innerContainer: { flex: 1 },
     header: {
       flexDirection: "row", alignItems: "center", justifyContent: "space-between",
@@ -377,6 +396,25 @@ function makeStyles(colors, fontScale, dir) {
     },
     deadlineText: { fontFamily: "Cairo_800ExtraBold", fontSize: scaled(12.5, fontScale), color: colors.white, marginRight: 8, flex: 1, textAlign: dir.textAlign, lineHeight: scaled(20, fontScale) },
     botBubble: { backgroundColor: colors.surface, borderBottomRightRadius: 5, borderWidth: 1, borderColor: colors.border },
+    welcomeCard: {
+      flexDirection: dir.row, alignItems: "center",
+      backgroundColor: colors.royalSoft,
+      borderRadius: 20, borderWidth: 1.5, borderColor: colors.platinum,
+      paddingVertical: 16, paddingHorizontal: 16, marginBottom: 20,
+      shadowColor: colors.platinum, shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.18, shadowRadius: 12, elevation: 5,
+    },
+    welcomeIconWrap: {
+      width: 44, height: 44, borderRadius: 22,
+      backgroundColor: colors.royal, alignItems: "center", justifyContent: "center",
+      borderWidth: 1, borderColor: colors.platinum,
+      marginLeft: dir.isRTL ? 14 : 0, marginRight: dir.isRTL ? 0 : 14,
+    },
+    welcomeText: {
+      flex: 1, fontFamily: "Tajawal_700Bold",
+      fontSize: scaled(14, fontScale), color: colors.onyx,
+      lineHeight: scaled(23, fontScale), textAlign: dir.textAlign,
+    },
     userBubble: { backgroundColor: colors.royal, borderBottomLeftRadius: 5 },
     messageText: { fontFamily: "Tajawal_500Medium", fontSize: scaled(14.5, fontScale), lineHeight: scaled(23, fontScale), textAlign: dir.textAlign },
     botText: { color: colors.textBody },
@@ -392,7 +430,7 @@ function makeStyles(colors, fontScale, dir) {
     exampleText: { fontFamily: "Tajawal_500Medium", fontSize: scaled(13, fontScale), color: colors.textBody, textAlign: dir.textAlign, flex: 1, marginLeft: 10 },
     inputWrapper: {
       flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8,
-      marginHorizontal: 16, marginBottom: 90,
+      marginHorizontal: 16, marginBottom: TAB_BAR_HEIGHT + 10,
       backgroundColor: colors.bgPure, borderRadius: 30, borderWidth: 1, borderColor: colors.glassBorder,
       shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 18, elevation: 8,
     },
