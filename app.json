@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#0F172A"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "sa.mizan.legal",
@@ -31,27 +33,38 @@
         "backgroundColor": "#0F172A"
       },
       "permissions": [
-        "INTERNET",
-        "CAMERA",
-        "RECORD_AUDIO",
-        "USE_BIOMETRIC",
-        "USE_FINGERPRINT",
-        "VIBRATE",
-        "RECEIVE_BOOT_COMPLETED",
-        "SCHEDULE_EXACT_ALARM"
+        "android.permission.INTERNET",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.SCHEDULE_EXACT_ALARM"
       ]
     },
     "plugins": [
-      ["expo-image-picker", {
-        "photosPermission": "يتيح ميزان اختيار صورة مستند من معرضك لتحليلها استرشادياً.",
-        "cameraPermission": "يستخدم ميزان الكاميرا لتصوير المستندات القانونية وتحليلها استرشادياً."
-      }],
-      ["expo-notifications", {
-        "icon": "./assets/icon-512.png",
-        "color": "#0F172A"
-      }],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "يتيح ميزان اختيار صورة مستند من معرضك لتحليلها استرشادياً.",
+          "cameraPermission": "يستخدم ميزان الكاميرا لتصوير المستندات القانونية وتحليلها استرشادياً."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon-512.png",
+          "color": "#0F172A"
+        }
+      ],
       "expo-secure-store",
       "expo-local-authentication"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "14780c21-5e21-40c6-984d-f826d460eb1f"
+      }
+    }
   }
 }
