@@ -22,10 +22,16 @@ export default function AuthScreen({ navigation }) {
 
   const enterApp = useCallback(() => {
     try {
+      console.log("Attempting navigation to MainTabs...");
       if (navigation && typeof navigation.replace === "function") {
-        navigation.replace("MainTabs"); // replace يمنع العودة لشاشة القفل
+        navigation.replace("MainTabs");
+        console.log("Navigation command sent successfully.");
+      } else {
+        console.log("Navigation object or replace function is missing!");
       }
-    } catch (e) {}
+    } catch (e) {
+      console.log("CRITICAL NAVIGATION ERROR: ", e);
+    }
   }, [navigation]);
 
   const runBiometric = useCallback(async () => {
