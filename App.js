@@ -29,27 +29,8 @@ try {
   I18nManager.swapLeftAndRightInRTL(true);
 } catch (e) {}
 
-const RootStack = createNativeStackNavigator();
-const HomeStackNav = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-
-function HomeStack() {
-  return (
-    <HomeStackNav.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: COLORS.bgPure },
-        headerShadowVisible: false,
-        headerTintColor: COLORS.royal,
-        headerTitleStyle: { fontFamily: "Cairo_800ExtraBold", fontSize: 20, color: COLORS.royal },
-        headerTitleAlign: "center",
-      }}
-    >
-      <HomeStackNav.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-      <HomeStackNav.Screen name="Section" component={SectionScreen} options={{ headerShown: false }} />
-      <HomeStackNav.Screen name="Platforms" component={PlatformsScreen} options={{ title: "دليل المنصات" }} />
-    </HomeStackNav.Navigator>
-  );
-}
+const RootStack = createNativeStackNavigator();
 
 // شاشة المساعد التقديري (تبويب بلا params) — تمرّر section افتراضي آمن
 function ToolsScreen(props) {
@@ -57,17 +38,13 @@ function ToolsScreen(props) {
   return <SectionScreen {...props} route={toolRoute} />;
 }
 
-// التطبيق الرئيسي (التبويبات) — بعد اجتياز البصمة
+// التبويبات الأربعة — لا stack متداخل، الشاشات الفرعية في RootStack
 function MainTabs() {
   const { theme: TH } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerStyle: { backgroundColor: COLORS.bgPure },
-        headerShadowVisible: false,
-        headerTintColor: TH.primary,
-        headerTitleStyle: { fontFamily: "Cairo_800ExtraBold", color: TH.primary, fontSize: 19 },
-        headerTitleAlign: "center",
+        headerShown: false,
         tabBarStyle: {
           position: "absolute",
           bottom: Platform.OS === "ios" ? 24 : 14,
@@ -90,10 +67,10 @@ function MainTabs() {
         },
       })}
     >
-      <Tab.Screen name="الرئيسية" component={HomeStack} options={{ headerShown: false }} />
-      <Tab.Screen name="المساعد التقديري" component={ToolsScreen} options={{ title: "المساعد التقديري" }} />
-      <Tab.Screen name="الاشتراكات" component={SubscriptionScreen} options={{ title: "الاشتراكات" }} />
-      <Tab.Screen name="حسابي" component={SettingsScreen} options={{ title: "حسابي" }} />
+      <Tab.Screen name="الرئيسية" component={HomeScreen} />
+      <Tab.Screen name="المساعد التقديري" component={ToolsScreen} />
+      <Tab.Screen name="الاشتراكات" component={SubscriptionScreen} />
+      <Tab.Screen name="حسابي" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }
@@ -121,10 +98,22 @@ function AppInner() {
   return (
     <NavigationContainer theme={NavTheme}>
       <StatusBar barStyle="light-content" backgroundColor={TH.g1} />
-      {/* Stack جذري: شاشة البصمة (Auth) أولاً ← ثم التطبيق (MainTabs) */}
+      {/* Stack جذري واحد مسطّح — لا تعشيش متعارض. البصمة أولاً ثم التبويبات والشاشات الفرعية */}
       <RootStack.Navigator initialRouteName="Auth" screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="Auth" component={AuthScreen} />
         <RootStack.Screen name="MainTabs" component={MainTabs} />
+        <RootStack.Screen name="Section" component={SectionScreen} />
+        <RootStack.Screen
+          name="Platforms"
+          component={PlatformsScreen}
+          options={{
+            headerShown: true, title: "دليل المنصات",
+            headerStyle: { backgroundColor: COLORS.bgPure }, headerShadowVisible: false,
+            headerTintColor: TH.primary,
+            headerTitleStyle: { fontFamily: "Cairo_800ExtraBold", fontSize: 20, color: TH.primary },
+            headerTitleAlign: "center",
+          }}
+        />
       </RootStack.Navigator>
     </NavigationContainer>
   );
@@ -136,7 +125,7 @@ export default function App() {
     Cairo_700Bold, Cairo_800ExtraBold, Cairo_900Black,
   });
 
-  // التحقق من التحديث الهوائي (OTA) عند التشغيل — محمي، فشله لا يكسر الإقلاع
+  // التحقق من التحديث الهوائي (OTA) — محمي، فشله لا يكسر الإقلاع
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -151,7 +140,7 @@ export default function App() {
     return () => { mounted = false; };
   }, []);
 
-  // تسجيل الجهاز + متجر الاشتراكات — محمي بالكامل + تنظيف
+  // تسجيل الجهاز + متجر الاشتراكات — محمي + تنظيف
   useEffect(() => {
     let mounted = true;
     (async () => {
