@@ -1,59 +1,32 @@
 {
   "expo": {
-    "name": "ميزان",
+    "name": "Mizan",
     "slug": "mizan-legal",
-    "version": "1.7.0",
+    "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon-512.png",
-    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/icon-512.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0F172A"
+      "backgroundColor": "#0F5132"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "sa.mizan.legal",
-      "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "يستخدم ميزان الكاميرا لتصوير المستندات القانونية وتحليلها استرشادياً. لا تُحفظ الصور على أي خادم.",
-        "NSPhotoLibraryUsageDescription": "يتيح ميزان اختيار صورة مستند من معرضك لتحليلها استرشادياً. لا تُحفظ الصور على أي خادم.",
-        "NSMicrophoneUsageDescription": "يستخدم ميزان الميكروفون للإدخال الصوتي لأسئلتك القانونية على جهازك.",
-        "NSFaceIDUsageDescription": "يستخدم ميزان معرّف الوجه أو البصمة لقفل التطبيق وحماية خصوصيتك."
+        "NSFaceIDUsageDescription": "يستخدم ميزان بصمة الوجه لتأمين دخولك إلى التطبيق."
       }
     },
     "android": {
       "package": "sa.mizan.legal",
-      "versionCode": 1,
-      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon-512.png",
-        "backgroundColor": "#0F172A"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0F5132"
       },
-      "permissions": [
-        "INTERNET",
-        "CAMERA",
-        "RECORD_AUDIO",
-        "USE_BIOMETRIC",
-        "USE_FINGERPRINT",
-        "VIBRATE",
-        "RECEIVE_BOOT_COMPLETED",
-        "SCHEDULE_EXACT_ALARM"
-      ]
+      "permissions": ["INTERNET", "USE_BIOMETRIC", "USE_FINGERPRINT"]
     },
-    "plugins": [
-      ["expo-image-picker", {
-        "photosPermission": "يتيح ميزان اختيار صورة مستند من معرضك لتحليلها استرشادياً.",
-        "cameraPermission": "يستخدم ميزان الكاميرا لتصوير المستندات القانونية وتحليلها استرشادياً."
-      }],
-      ["expo-notifications", {
-        "icon": "./assets/icon-512.png",
-        "color": "#0F172A"
-      }],
-      "expo-secure-store",
-      "expo-local-authentication",
-      "expo-iap"
-    ]
+    "plugins": ["expo-local-authentication"]
   }
 }
