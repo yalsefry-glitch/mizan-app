@@ -12,8 +12,16 @@ export default function AuthScreen({ navigation }) {
   const [message, setMessage] = useState("");
 
   const enterApp = useCallback(() => {
-    if (navigation && typeof navigation.replace === "function") {
-      navigation.replace("MainTabs");
+    try {
+      if (navigation && typeof navigation.replace === "function") {
+        navigation.replace("MainTabs");
+      } else if (navigation && typeof navigation.navigate === "function") {
+        navigation.navigate("MainTabs");
+      } else {
+        setMessage("تعذّر الانتقال: زر التنقّل غير متاح.");
+      }
+    } catch (e) {
+      setMessage("خطأ في الانتقال: " + String(e.message || e));
     }
   }, [navigation]);
 
@@ -36,10 +44,11 @@ export default function AuthScreen({ navigation }) {
         enterApp();
       } else {
         setStatus("failed");
-        setMessage("لم يتم التحقّق. حاول مرة أخرى.");
+        setMessage("لم يتم التحقّق. استخدم الزر للدخول.");
       }
     } catch (e) {
-      enterApp();
+      setStatus("failed");
+      setMessage("تعذّر التحقّق. استخدم الزر للدخول.");
     }
   }, [enterApp]);
 
@@ -65,9 +74,12 @@ export default function AuthScreen({ navigation }) {
         ) : (
           <TouchableOpacity style={[styles.unlockButton, { backgroundColor: TH.accent }]} activeOpacity={0.85} onPress={runBiometric}>
             <FontAwesome5 name="fingerprint" size={20} color={TH.primaryDeep} style={{ marginLeft: 10 }} />
-            <Text style={[styles.unlockText, { color: TH.primaryDeep }]}>إعادة المحاولة</Text>
+            <Text style={[styles.unlockText, { color: TH.primaryDeep }]}>فتح بالبصمة</Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity style={styles.enterDirect} activeOpacity={0.7} onPress={enterApp}>
+          <Text style={styles.enterDirectText}>الدخول للتطبيق</Text>
+        </TouchableOpacity>
         {message ? <Text style={styles.errorMessage}>{message}</Text> : null}
       </View>
       <Text style={styles.footer}>إرشاد توعوي بالأنظمة والإجراءات السعودية</Text>
@@ -85,6 +97,8 @@ const styles = StyleSheet.create({
   statusText: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: "rgba(255,255,255,0.85)", marginRight: 10 },
   unlockButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 15, paddingHorizontal: 36, borderRadius: 16, marginTop: 36 },
   unlockText: { fontFamily: "Cairo_800ExtraBold", fontSize: 15.5 },
-  errorMessage: { fontFamily: "Tajawal_500Medium", fontSize: 12.5, color: "#FCA5A5", marginTop: 18, textAlign: "center" },
+  enterDirect: { marginTop: 20, paddingVertical: 10, paddingHorizontal: 24 },
+  enterDirectText: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: "rgba(255,255,255,0.6)", textDecorationLine: "underline" },
+  errorMessage: { fontFamily: "Tajawal_500Medium", fontSize: 12.5, color: "#FCA5A5", marginTop: 18, textAlign: "center", paddingHorizontal: 20 },
   footer: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: "rgba(255,255,255,0.5)", textAlign: "center", paddingBottom: 28 },
 });
