@@ -7,7 +7,7 @@ export const axes = [
   },
   {
     id: 'prosecution',
-    title: 'النيابة والضبط الجنائي',
+    title: 'النيابة والضبط',
     experts: ['النيابة العامة', 'الضبط الجنائي'],
   },
   {
