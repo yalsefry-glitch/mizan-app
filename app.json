@@ -27,8 +27,7 @@
       "permissions": ["INTERNET", "USE_BIOMETRIC", "USE_FINGERPRINT"]
     },
     "plugins": [
-      "expo-local-authentication",
-      "react-native-reanimated"
+      "expo-local-authentication"
     ]
   }
 }
