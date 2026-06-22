@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ميزان",
+    "name": "Mezain",
     "slug": "mizan",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +11,11 @@
       "ios"
     ],
     "android": {
-      "package": "sa.mizan.app"
+      "package": "sa.mizan.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0F5132"
+      }
     },
     "ios": {
       "bundleIdentifier": "sa.mizan.app"
@@ -25,6 +29,7 @@
       "eas": {
         "projectId": "64d231cd-9597-48ac-bdba-b2d7c60466e5"
       }
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }
