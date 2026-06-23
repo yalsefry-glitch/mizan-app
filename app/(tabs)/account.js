@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { supabase } from '../../lib/supabase';
+import { colors } from '../../theme/colors';
 
 export default function Account() {
   const [session, setSession] = useState(null);
@@ -15,15 +16,23 @@ export default function Account() {
   }, []);
 
   async function signIn() {
+    if (!email.trim() || !password) {
+      Alert.alert('تنبيه', 'يرجى إدخال البريد وكلمة المرور');
+      return;
+    }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
     if (error) Alert.alert('خطأ في الدخول', error.message);
   }
 
   async function signUp() {
+    if (!email.trim() || !password) {
+      Alert.alert('تنبيه', 'يرجى إدخال البريد وكلمة المرور');
+      return;
+    }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({ email: email.trim(), password });
     setLoading(false);
     if (error) Alert.alert('خطأ في إنشاء الحساب', error.message);
     else Alert.alert('تم', 'أُنشئ حسابك. تحقّق من بريدك إن طُلب التفعيل.');
@@ -37,7 +46,7 @@ export default function Account() {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>حسابي</Text>
-        <Text style={styles.note}>{session.user.email}</Text>
+        <Text style={styles.email}>{session.user.email}</Text>
         <TouchableOpacity style={styles.btnOut} onPress={signOut}>
           <Text style={styles.btnOutText}>تسجيل الخروج</Text>
         </TouchableOpacity>
@@ -52,7 +61,7 @@ export default function Account() {
       <TextInput
         style={styles.input}
         placeholder="البريد الإلكتروني"
-        placeholderTextColor="#9CA9A2"
+        placeholderTextColor={colors.muted}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -61,13 +70,13 @@ export default function Account() {
       <TextInput
         style={styles.input}
         placeholder="كلمة المرور"
-        placeholderTextColor="#9CA9A2"
+        placeholderTextColor={colors.muted}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
       {loading ? (
-        <ActivityIndicator color="#0F5132" style={{ marginTop: 16 }} />
+        <ActivityIndicator color={colors.emerald} style={{ marginTop: 16 }} />
       ) : (
         <>
           <TouchableOpacity style={styles.btn} onPress={signIn}>
@@ -83,14 +92,15 @@ export default function Account() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FBFCFA', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  title: { color: '#0F5132', fontSize: 24, fontWeight: '700', marginBottom: 4 },
-  note: { color: '#9CA9A2', fontSize: 14, marginBottom: 24 },
-  input: { width: '100%', backgroundColor: '#FFFFFF', borderColor: '#E3EFE8', borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 12, fontSize: 16, color: '#0A2A1B' },
-  btn: { width: '100%', backgroundColor: '#0F5132', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 8 },
-  btnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  container: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  title: { fontFamily: 'Cairo_700Bold', fontSize: 24, color: colors.emerald, marginBottom: 6 },
+  note: { fontFamily: 'Tajawal_400Regular', fontSize: 14, color: colors.muted, marginBottom: 24 },
+  email: { fontFamily: 'Tajawal_500Medium', fontSize: 15, color: colors.muted, marginBottom: 24 },
+  input: { width: '100%', backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 12, fontSize: 16, fontFamily: 'Tajawal_400Regular', color: colors.textDark },
+  btn: { width: '100%', backgroundColor: colors.emerald, borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 8 },
+  btnText: { fontFamily: 'Tajawal_700Bold', color: '#FFFFFF', fontSize: 16 },
   btnAlt: { width: '100%', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 8 },
-  btnAltText: { color: '#0F5132', fontSize: 15, fontWeight: '600' },
-  btnOut: { backgroundColor: '#C9A227', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 32, marginTop: 24 },
-  btnOutText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  btnAltText: { fontFamily: 'Tajawal_700Bold', color: colors.emerald, fontSize: 15 },
+  btnOut: { backgroundColor: colors.gold, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 36, marginTop: 8 },
+  btnOutText: { fontFamily: 'Tajawal_700Bold', color: '#FFFFFF', fontSize: 16 },
 });
