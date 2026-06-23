@@ -1,12 +1,13 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { colors } from '../../theme/colors';
 
 export default function EstimatorScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
       <Text style={styles.title}>المساعد التقديري</Text>
-      <Text style={styles.note}>قيد الإنشاء</Text>
+      <Text style={styles.note}>قريباً</Text>
     </View>
   );
 }
@@ -14,18 +15,19 @@ export default function EstimatorScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FBFCFA',
+    backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    color: '#0F5132',
+    fontFamily: 'Cairo_700Bold',
     fontSize: 24,
-    fontWeight: '700',
+    color: colors.emerald,
   },
   note: {
-    color: '#9CA9A2',
+    fontFamily: 'Tajawal_400Regular',
     fontSize: 14,
+    color: colors.muted,
     marginTop: 8,
   },
 });
