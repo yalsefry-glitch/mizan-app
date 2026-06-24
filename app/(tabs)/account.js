@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { supabase } from '../../lib/supabase';
-import { colors } from '../../theme/colors';
+import { useTheme, THEME_LIST } from '../../theme/ThemeContext';
 
 const BIO_KEY = 'mizan_biometric_lock';
 
@@ -37,6 +37,8 @@ function GoogleLogo({ size = 20 }) {
 
 export default function Account() {
   const insets = useSafeAreaInsets();
+  const { colors, themeKey, setThemeKey } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const writingDir = I18nManager.isRTL ? 'rtl' : 'ltr';
 
   const [checking, setChecking] = useState(true);
@@ -118,7 +120,6 @@ export default function Account() {
     await supabase.auth.signOut();
   }
 
-  // أثناء فحص الجلسة: شاشة تحميل (تمنع وميض شاشة الدخول)
   if (checking) {
     return (
       <View style={styles.loadingRoot}>
@@ -148,6 +149,26 @@ export default function Account() {
             </View>
             <Text style={[styles.emailText, { writingDirection: writingDir }]}>{session.user?.email}</Text>
             <Text style={[styles.planText, { writingDirection: writingDir }]}>حساب نشط</Text>
+          </View>
+
+          {/* مبدّل الثيمات */}
+          <View style={styles.themeCard}>
+            <Text style={[styles.themeTitle, { writingDirection: writingDir }]}>المظهر</Text>
+            <View style={styles.themeRow}>
+              {THEME_LIST.map((t) => {
+                const selected = t.key === themeKey;
+                return (
+                  <Pressable
+                    key={t.key}
+                    style={[styles.themeChip, selected && styles.themeChipSel]}
+                    onPress={() => setThemeKey(t.key)}
+                  >
+                    <View style={[styles.themeDot, { backgroundColor: t.emerald, borderColor: t.gold }]} />
+                    <Text style={[styles.themeName, selected && styles.themeNameSel]}>{t.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           <View style={styles.settingsCard}>
@@ -279,7 +300,7 @@ export default function Account() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   loadingRoot: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   head: {
@@ -309,6 +330,31 @@ const styles = StyleSheet.create({
   },
   emailText: { fontFamily: 'Cairo_700Bold', fontSize: 16, color: colors.textDark },
   planText: { fontFamily: 'Tajawal_400Regular', fontSize: 13, color: colors.gold, marginTop: 4 },
+  themeCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 14,
+  },
+  themeTitle: { fontFamily: 'Cairo_700Bold', fontSize: 15, color: colors.textDark, marginBottom: 12 },
+  themeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  themeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 13,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
+  },
+  themeChipSel: { borderColor: colors.gold, backgroundColor: 'rgba(201,162,39,0.08)' },
+  themeDot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1.5 },
+  themeName: { fontFamily: 'Tajawal_500Medium', fontSize: 13, color: colors.textBody },
+  themeNameSel: { fontFamily: 'Tajawal_700Bold', color: colors.textDark },
   input: {
     width: '100%',
     height: 50,
@@ -353,19 +399,6 @@ const styles = StyleSheet.create({
     marginBottom: 11,
   },
   googleBtnText: { fontFamily: 'Cairo_700Bold', fontSize: 14.5, color: colors.textDark },
-  bioBtn: {
-    width: '100%',
-    height: 50,
-    borderRadius: 13,
-    backgroundColor: 'rgba(15,81,50,0.06)',
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  bioBtnText: { fontFamily: 'Cairo_700Bold', fontSize: 14.5, color: colors.emerald },
   switchText: { fontFamily: 'Tajawal_500Medium', fontSize: 14, color: colors.emerald, textAlign: 'center', marginTop: 18 },
   settingsCard: {
     backgroundColor: colors.card,
