@@ -53,7 +53,7 @@ export const axes = [
   },
   {
     id: 'cyber',
-    title: 'المخالفات المعلوماتية',
+    title: 'مخالفات رقمية',
     icon: 'shield-outline',
     experts: [
       { id: 'financial_fraud', name: 'الاحتيال المالي الرقمي' },
