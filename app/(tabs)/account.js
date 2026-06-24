@@ -22,6 +22,7 @@ import { supabase } from '../../lib/supabase';
 import { useTheme, THEME_LIST } from '../../theme/ThemeContext';
 
 const BIO_KEY = 'mizan_biometric_lock';
+const DELETE_FN_URL = 'https://lzfgjvafmvofwjiyvelq.supabase.co/functions/v1/delete-account';
 
 // شعار Google الرسمي (حرف G بالألوان الأربعة)
 function GoogleLogo({ size = 20 }) {
@@ -120,6 +121,56 @@ export default function Account() {
     await supabase.auth.signOut();
   }
 
+  function confirmDeleteAccount() {
+    Alert.alert(
+      'حذف الحساب',
+      'سيُحذف حسابك وكل بياناتك نهائيّاً، ولا يمكن التراجع. هل تريد المتابعة؟',
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        { text: 'متابعة', style: 'destructive', onPress: secondConfirmDelete },
+      ],
+    );
+  }
+
+  function secondConfirmDelete() {
+    Alert.alert(
+      'تأكيد نهائي',
+      'هذا إجراء نهائي لا رجعة فيه. أتأكّد حذف الحساب؟',
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        { text: 'حذف نهائيّاً', style: 'destructive', onPress: doDeleteAccount },
+      ],
+    );
+  }
+
+  async function doDeleteAccount() {
+    setBusy(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess?.session?.access_token;
+      if (!token) {
+        setBusy(false);
+        Alert.alert('تعذّر الحذف', 'انتهت الجلسة. سجّل دخولك ثم حاول مجدداً.');
+        return;
+      }
+      const res = await fetch(DELETE_FN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setBusy(false);
+      if (data.status === 'deleted') {
+        await supabase.auth.signOut();
+        Alert.alert('تم الحذف', 'تم حذف حسابك وبياناتك بالكامل.');
+      } else {
+        Alert.alert('تعذّر الحذف', 'حدث خطأ أثناء حذف الحساب. حاول لاحقاً.');
+      }
+    } catch (e) {
+      setBusy(false);
+      Alert.alert('تعذّر الحذف', 'تحقّق من الاتصال وحاول مجدداً.');
+    }
+  }
+
   if (checking) {
     return (
       <View style={styles.loadingRoot}>
@@ -205,6 +256,14 @@ export default function Account() {
               <View style={styles.settingLabel}>
                 <Ionicons name="log-out-outline" size={19} color={colors.muted} />
                 <Text style={[styles.settingText, { writingDirection: writingDir, color: colors.muted }]}>تسجيل الخروج</Text>
+              </View>
+              <Ionicons name="chevron-back" size={18} color={colors.muted} />
+            </Pressable>
+            <View style={styles.divider} />
+            <Pressable style={styles.settingRow} onPress={confirmDeleteAccount}>
+              <View style={styles.settingLabel}>
+                <Ionicons name="trash-outline" size={19} color="#C0392B" />
+                <Text style={[styles.settingText, { writingDirection: writingDir, color: '#C0392B' }]}>حذف الحساب</Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={colors.muted} />
             </Pressable>
