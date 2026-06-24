@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -38,6 +39,7 @@ function GoogleLogo({ size = 20 }) {
 
 export default function Account() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { colors, themeKey, setThemeKey } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const writingDir = I18nManager.isRTL ? 'rtl' : 'ltr';
@@ -244,13 +246,13 @@ export default function Account() {
               />
             </View>
             <View style={styles.divider} />
-            <View style={styles.settingRow}>
+            <Pressable style={styles.settingRow} onPress={() => router.push('/privacy')}>
               <View style={styles.settingLabel}>
                 <Ionicons name="document-text-outline" size={19} color={colors.textBody} />
                 <Text style={[styles.settingText, { writingDirection: writingDir }]}>الشروط والخصوصية</Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={colors.muted} />
-            </View>
+            </Pressable>
             <View style={styles.divider} />
             <Pressable style={styles.settingRow} onPress={signOut}>
               <View style={styles.settingLabel}>
