@@ -154,8 +154,8 @@ export default function ChatScreen() {
       ) : (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={insets.top + 60}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 60 : 0}
         >
           <ScrollView
             ref={scrollRef}
@@ -262,8 +262,8 @@ const styles = StyleSheet.create({
   },
   discText: { fontFamily: 'Tajawal_400Regular', fontSize: 11.5, color: colors.textBody, lineHeight: 18, textAlign: 'center' },
   msg: { maxWidth: '82%', padding: 12, borderRadius: 18, marginBottom: 12 },
-  msgUser: { backgroundColor: colors.emerald, alignSelf: 'flex-start', borderBottomRightRadius: 5 },
-  msgBot: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignSelf: 'flex-end', borderBottomLeftRadius: 5 },
+  msgUser: { backgroundColor: colors.emerald, alignSelf: 'flex-end', borderBottomLeftRadius: 5 },
+  msgBot: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignSelf: 'flex-start', borderBottomRightRadius: 5 },
   msgUserText: { fontFamily: 'Tajawal_400Regular', fontSize: 14.5, color: '#FFFFFF', lineHeight: 24 },
   msgBotText: { fontFamily: 'Tajawal_400Regular', fontSize: 14.5, color: colors.textDark, lineHeight: 24 },
   routeText: { fontFamily: 'Cairo_700Bold', fontSize: 12.5, color: colors.gold, marginTop: 9, paddingTop: 9, borderTopWidth: 1, borderTopColor: colors.border, borderStyle: 'dashed' },
