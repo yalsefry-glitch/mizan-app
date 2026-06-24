@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { axes } from '../../data/axes';
 
@@ -24,7 +25,7 @@ const toArabic = (n) => String(n).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩
 const { width: SCREEN_W } = Dimensions.get('window');
 const SHIMMER_RANGE = SCREEN_W * 0.55;
 
-function AxisCard({ axis, writingDir }) {
+function AxisCard({ axis, writingDir, onPress }) {
   const press = useRef(new Animated.Value(0)).current;
   const shimmerX = useRef(new Animated.Value(0)).current;
   const shimmerLoop = useRef(null);
@@ -82,7 +83,7 @@ function AxisCard({ axis, writingDir }) {
   return (
     <Animated.View style={[styles.cardWrap, { transform: [{ translateY }, { scale }] }]}>
       <Animated.View style={[styles.cardGlow, { opacity: press }]} pointerEvents="none" />
-      <Pressable onPressIn={onIn} onPressOut={onOut} style={styles.borderWrap}>
+      <Pressable onPressIn={onIn} onPressOut={onOut} onPress={onPress} style={styles.borderWrap}>
         <Animated.View style={[styles.borderGrad, { opacity: borderOpacity }]} pointerEvents="none">
           <LinearGradient
             colors={[colors.gold, colors.goldLight, colors.gold]}
@@ -127,6 +128,7 @@ function AxisCard({ axis, writingDir }) {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const shimmer = useRef(new Animated.Value(0)).current;
 
   // اتجاه الكتابة يُقرأ وقت العرض: rtl للعربي، ltr للإنجليزي. المحاذاة تلقائية حسب لغة المحتوى.
@@ -226,9 +228,15 @@ export default function HomeScreen() {
             key="orchestrator"
             axis={{ id: 'orchestrator', title: 'ميزان العام', icon: 'scale-outline', subtitle: 'نقطة انطلاقك' }}
             writingDir={writingDir}
+            onPress={() => router.push({ pathname: '/chat', params: { name: 'ميزان العام' } })}
           />
           {axes.map((axis) => (
-            <AxisCard key={axis.id} axis={axis} writingDir={writingDir} />
+            <AxisCard
+              key={axis.id}
+              axis={axis}
+              writingDir={writingDir}
+              onPress={() => {}}
+            />
           ))}
         </View>
 
