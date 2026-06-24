@@ -1,8 +1,11 @@
+import { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
 
 export default function EstimatorScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -12,7 +15,7 @@ export default function EstimatorScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
