@@ -11,6 +11,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import {
@@ -89,7 +90,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <KeyboardProvider>
       <Stack screenOptions={{ headerShown: false }} />
       {locked ? (
         <LinearGradient
@@ -109,7 +110,7 @@ export default function RootLayout() {
           </Pressable>
         </LinearGradient>
       ) : null}
-    </>
+    </KeyboardProvider>
   );
 }
 
