@@ -26,6 +26,8 @@ export default function ChatScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const assistantName = params.name ? String(params.name) : 'ميزان العام';
+  // معرّف المساعد المتخصّص (يأتي من شاشة المساعدين). غيابه يعني المنسّق «ميزان العام».
+  const assistantId = params.assistantId ? String(params.assistantId) : null;
 
   const writingDir = I18nManager.isRTL ? 'rtl' : 'ltr';
   const [checking, setChecking] = useState(true);
@@ -71,15 +73,32 @@ export default function ChatScreen() {
         return;
       }
 
+      // جسم الطلب: نرسل assistant_id فقط إن كان المستخدم في مساعد متخصّص.
+      // غيابه → المنسّق «ميزان العام» (كما هو السلوك الافتراضي في الخادم).
+      const payload = assistantId
+        ? { message: text, assistant_id: assistantId }
+        : { message: text };
+
       const res = await fetch(FN_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
+
+      // حدّ المعدّل: طلبات كثيرة بسرعة
+      if (data.access === 'rate_limited') {
+        setMessages((m) => [...m, {
+          role: 'bot',
+          text: data.message || 'أرسلت الطلبات بسرعة كبيرة. انتظر لحظةً ثم حاول مرة أخرى.',
+        }]);
+        scrollToEnd();
+        setSending(false);
+        return;
+      }
 
       // طلب الاشتراك
       if (data.access === 'subscribe_required') {
@@ -93,7 +112,7 @@ export default function ChatScreen() {
         return;
       }
 
-      // توجيه لمساعد متخصّص
+      // توجيه لمساعد متخصّص (يحدث من المنسّق فقط)
       if (data.mode === 'routed') {
         setMessages((m) => [...m, {
           role: 'bot',
@@ -105,7 +124,7 @@ export default function ChatScreen() {
         return;
       }
 
-      // ردّ عام
+      // ردّ المساعد (متخصّص أو عام)
       const reply = data.reply || 'تعذّر الحصول على ردّ الآن. حاول مرة أخرى.';
       setMessages((m) => [...m, { role: 'bot', text: reply }]);
       scrollToEnd();
