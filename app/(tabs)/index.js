@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -20,10 +20,51 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme/ThemeContext';
 import { axes } from '../../data/axes';
+import { supabase } from '../../lib/supabase';
 
 const toArabic = (n) => String(n).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)]);
 const { width: SCREEN_W } = Dimensions.get('window');
 const SHIMMER_RANGE = SCREEN_W * 0.55;
+
+// جملة تعريفية موحية تحت كل محور (بدل عدّ المختصّين).
+const AXIS_TAGLINE = {
+  family: 'أسرتك وأحوالك بثقة',
+  labor: 'حقوقك ومسارك المهني',
+  finance: 'تعاملاتك المالية بثقة',
+  judicial: 'طريقك في الإجراءات العدلية',
+  cyber: 'حمايتك في العالم الرقمي',
+  emergency: 'تصرّفك وقت الحاجة',
+  development: 'نموّك المهني خطوة بخطوة',
+};
+
+// قاموس البحث: كلمات مفتاحية (عربي/إنجليزي/عامّية) تُوجّه لكل محور.
+// المطابقة تبحث إن احتوى نصّ المستخدم أيّاً من كلمات المحور.
+const SEARCH_INDEX = {
+  family: ['اسرة', 'أسرة', 'احوال', 'أحوال', 'مدنية', 'زواج', 'طلاق', 'خلع', 'حضانة', 'نفقة', 'رؤية', 'صلح', 'عنف', 'حماية', 'توثيق', 'family', 'marriage', 'divorce', 'custody', 'alimony'],
+  labor: ['عمل', 'عقود', 'عقد', 'قوى', 'مدد', 'رواتب', 'راتب', 'شكوى', 'شكاوى', 'عمالة', 'مساند', 'خادمة', 'سائق', 'تأمينات', 'تامينات', 'اجتماعية', 'جوازات', 'اقامة', 'إقامة', 'كفالة', 'نقل', 'وظيفة', 'موظف', 'labor', 'work', 'qiwa', 'mudad', 'gosi', 'insurance', 'jobs', 'residency', 'iqama'],
+  finance: ['مال', 'بنك', 'بنوك', 'ساما', 'حساب', 'دعم', 'ضمان', 'مطالبة', 'مطالبات', 'تنفيذ', 'شيك', 'شيكات', 'تجارية', 'تعثر', 'إفلاس', 'افلاس', 'قرض', 'دين', 'ديون', 'تمويل', 'finance', 'bank', 'sama', 'support', 'claim', 'cheque', 'bankruptcy', 'loan', 'debt'],
+  judicial: ['عدلي', 'عدل', 'ناجز', 'محكمة', 'محاكم', 'تقاضي', 'دعوى', 'قضية', 'توثيق', 'تصديق', 'وكالة', 'صك', 'اعتراض', 'مهلة', 'استئناف', 'تظلم', 'judicial', 'najiz', 'court', 'lawsuit', 'appeal', 'notary'],
+  cyber: ['احتيال', 'نصب', 'ابتزاز', 'اختراق', 'انتحال', 'هكر', 'تهديد', 'بلاغ', 'الكتروني', 'إلكتروني', 'رقمي', 'سيبراني', 'حساب مخترق', 'cyber', 'fraud', 'scam', 'extortion', 'hacking', 'phishing'],
+  emergency: ['طوارئ', 'حادث', 'حوادث', 'مروري', 'مرور', 'مخالفة', 'مخالفات', 'اعتراض مروري', 'اسعاف', 'إسعاف', 'نجم', 'ساهر', 'تأمين مركبة', 'سيارة', 'emergency', 'accident', 'traffic', 'violation', 'ambulance'],
+  development: ['تطوير', 'تطويرك', 'مسار', 'مهني', 'ترقية', 'ترقيات', 'شهادة', 'شهادات', 'تاهيل', 'تأهيل', 'احترافية', 'ريادة', 'اعمال', 'أعمال', 'منشأة', 'منشآت', 'مشروع', 'career', 'professional', 'certificate', 'certification', 'entrepreneurship', 'startup', 'business'],
+};
+
+// يبحث في القاموس عن المحاور المطابقة لنصّ المستخدم.
+function searchAxes(query) {
+  const q = (query || '').trim().toLowerCase();
+  if (!q) return [];
+  const matched = [];
+  for (const axis of axes) {
+    const kws = SEARCH_INDEX[axis.id] || [];
+    // مطابقة على الكلمات المفتاحية، أو على عنوان المحور، أو على أسماء المساعدين.
+    const hit =
+      kws.some((k) => q.includes(k.toLowerCase()) || k.toLowerCase().includes(q)) ||
+      axis.title.toLowerCase().includes(q) ||
+      axis.experts.some((e) => e.name.toLowerCase().includes(q));
+    if (hit) matched.push(axis);
+  }
+  return matched;
+}
 
 function AxisCard({ axis, writingDir, onPress, colors, styles }) {
   const press = useRef(new Animated.Value(0)).current;
@@ -80,6 +121,8 @@ function AxisCard({ axis, writingDir, onPress, colors, styles }) {
     outputRange: [-SHIMMER_RANGE, SHIMMER_RANGE],
   });
 
+  const tagline = AXIS_TAGLINE[axis.id] || axis.subtitle || '';
+
   return (
     <Animated.View style={[styles.cardWrap, { transform: [{ translateY }, { scale }] }]}>
       <Animated.View style={[styles.cardGlow, { opacity: press }]} pointerEvents="none" />
@@ -103,8 +146,8 @@ function AxisCard({ axis, writingDir, onPress, colors, styles }) {
           <Text style={[styles.cardTitle, { writingDirection: writingDir }]}>
             {axis.title}
           </Text>
-          <Text style={[styles.cardCount, { writingDirection: writingDir }]}>
-            {axis.subtitle ? axis.subtitle : `${toArabic(axis.experts.length)} مختصّون`}
+          <Text style={[styles.cardTag, { writingDirection: writingDir }]}>
+            {tagline}
           </Text>
           <Animated.View
             style={[
@@ -132,6 +175,7 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const shimmer = useRef(new Animated.Value(0)).current;
+  const [query, setQuery] = useState('');
 
   const writingDir = I18nManager.isRTL ? 'rtl' : 'ltr';
 
@@ -146,10 +190,34 @@ export default function HomeScreen() {
     ).start();
   }, [shimmer]);
 
+  // فحص الموافقة على الشروط: إن كان المستخدم مسجّلاً ولم يوافق بعد، يوجَّه لشاشة الشروط.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: sess } = await supabase.auth.getSession();
+      const uid = sess?.session?.user?.id;
+      if (!uid) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('terms_accepted_at')
+        .eq('id', uid)
+        .single();
+      if (active && data && !data.terms_accepted_at) {
+        router.replace('/terms');
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
   const translateX = shimmer.interpolate({
     inputRange: [0, 1],
     outputRange: [-SCREEN_W, SCREEN_W],
   });
+
+  // نتائج البحث الحيّة (محاور مطابقة لنصّ البحث).
+  const results = useMemo(() => searchAxes(query), [query]);
+  const searching = query.trim().length > 0;
+  const shown = searching ? results : axes;
 
   return (
     <View style={styles.root}>
@@ -214,40 +282,54 @@ export default function HomeScreen() {
             style={styles.searchInput}
             placeholder="ابحث عن خدمة أو سؤال..."
             placeholderTextColor={colors.muted}
+            value={query}
+            onChangeText={setQuery}
           />
+          {searching ? (
+            <Pressable onPress={() => setQuery('')} hitSlop={10}>
+              <Ionicons name="close-circle" size={19} color={colors.muted} />
+            </Pressable>
+          ) : null}
         </View>
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.seclabel}>
           <View style={styles.secbar} />
-          <Text style={styles.sectionTitle}>المحاور</Text>
+          <Text style={styles.sectionTitle}>{searching ? 'نتائج البحث' : 'المحاور'}</Text>
         </View>
 
-        <View style={styles.grid}>
-          <AxisCard
-            key="orchestrator"
-            axis={{ id: 'orchestrator', title: 'ميزان العام', icon: 'scale-outline', subtitle: 'نقطة انطلاقك' }}
-            writingDir={writingDir}
-            onPress={() => router.push({ pathname: '/chat', params: { name: 'ميزان العام' } })}
-            colors={colors}
-            styles={styles}
-          />
-          {axes.map((axis) => (
-            <AxisCard
-              key={axis.id}
-              axis={axis}
-              writingDir={writingDir}
-              onPress={() => router.push({ pathname: '/experts', params: { axisId: axis.id } })}
-              colors={colors}
-              styles={styles}
-            />
-          ))}
-        </View>
-
-        <Text style={styles.disclaimer}>
-          المعلومات قابلة للتحديث، ويُنصح باستشارة مختصّ قبل الإجراء.
-        </Text>
+        {searching && shown.length === 0 ? (
+          <View style={styles.noRes}>
+            <Ionicons name="search-outline" size={40} color={colors.muted} />
+            <Text style={[styles.noResText, { writingDirection: writingDir }]}>
+              لا نتائج مطابقة. جرّب كلمة أخرى.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {!searching ? (
+              <AxisCard
+                key="orchestrator"
+                axis={{ id: 'orchestrator', title: 'ميزان العام', icon: 'scale-outline', subtitle: 'نقطة انطلاقك' }}
+                writingDir={writingDir}
+                onPress={() => router.push({ pathname: '/chat', params: { name: 'ميزان العام' } })}
+                colors={colors}
+                styles={styles}
+              />
+            ) : null}
+            {shown.map((axis) => (
+              <AxisCard
+                key={axis.id}
+                axis={axis}
+                writingDir={writingDir}
+                onPress={() => router.push({ pathname: '/experts', params: { axisId: axis.id } })}
+                colors={colors}
+                styles={styles}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -338,11 +420,13 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.textDark,
     padding: 0,
   },
-  body: { padding: 18, paddingBottom: 40 },
+  body: { padding: 18, paddingBottom: 18 },
   seclabel: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 15 },
   secbar: { width: 26, height: 3, borderRadius: 2, backgroundColor: colors.gold },
   sectionTitle: { fontFamily: 'Cairo_700Bold', fontSize: 18, color: colors.emerald },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  noRes: { alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
+  noResText: { fontFamily: 'Tajawal_500Medium', fontSize: 14, color: colors.muted, textAlign: 'center' },
   cardWrap: { width: '48%', marginBottom: 13 },
   cardGlow: {
     position: 'absolute',
@@ -394,18 +478,11 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.textDark,
     lineHeight: 21,
   },
-  cardCount: {
-    fontFamily: 'Tajawal_700Bold',
-    fontSize: 12,
+  cardTag: {
+    fontFamily: 'Tajawal_500Medium',
+    fontSize: 11.5,
     color: colors.gold,
     marginTop: 7,
-  },
-  disclaimer: {
-    fontFamily: 'Tajawal_400Regular',
-    fontSize: 11.5,
-    lineHeight: 19,
-    color: colors.muted,
-    textAlign: 'center',
-    marginTop: 12,
+    lineHeight: 18,
   },
 });
