@@ -262,7 +262,7 @@ export default function ChatScreen() {
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior="padding"
-          keyboardVerticalOffset={insets.top + 56}
+          keyboardVerticalOffset={0}
         >
           <ScrollView
             ref={scrollRef}
