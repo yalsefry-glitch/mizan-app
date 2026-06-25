@@ -1,7 +1,8 @@
 // =====================================================================
-// ميزان — rapid-function (نسخة البحث الحيّ المحصّن)
+// ميزان — rapid-function (نسخة البحث الحيّ المحصّن + ضبط الحرارة المتدرّجة)
 // المنسّق: توجيه فقط، بلا بحث. المتخصّصون: أداة web_search واحدة عبر Tavily.
 // القيود الصلبة: حصر النطاقات الرسمية + تجريد الاستعلام + السقوط الآمن.
+// [حرارة] المساعدون الحرجة/الحسّاسة 0.2 | الباقي 0.4 | المنسّق افتراضي.
 // =====================================================================
 
 Deno.serve(async (req) => {
@@ -17,6 +18,20 @@ Deno.serve(async (req) => {
   const RL_MAX_PER_WINDOW = 20;   // أقصى عدد طلبات في النافذة
   const RL_WINDOW_MS = 60000;     // طول النافذة: دقيقة واحدة
   const RL_COOLDOWN_MS = 1500;    // أدنى فاصل بين طلبين: 1.5 ثانية
+
+  // ---------------------------------------------------------------
+  // [حرارة] ضبط الحرارة المتدرّجة لتقليل العشوائية/الهلوسة.
+  // الحرجة (الحماية الأسرية، الطوارئ) والحسّاسة (الطلاق، الابتزاز): 0.2
+  // الباقي من المتخصّصين: 0.4 (يبقي اللهجة طبيعية بلا هلوسة).
+  // المنسّق: لا نحدّد حرارة (افتراضي) — أداة توجيه لا يكتب محتوى.
+  // ---------------------------------------------------------------
+  const LOW_TEMP_IDS = [
+    "family_protection",     // حرج
+    "emergency_firstaid",    // حرج
+    "family_divorce",        // حسّاس
+    "electronic_extortion",  // حسّاس
+  ];
+  const tempFor = (id: string): number => (LOW_TEMP_IDS.includes(id) ? 0.2 : 0.4);
 
   const json = (obj: unknown, status = 200) =>
     new Response(JSON.stringify(obj, null, 2), {
@@ -232,6 +247,8 @@ Deno.serve(async (req) => {
     { role: "user", content: userMessage },
   ];
   const payload: Record<string, unknown> = { model: "gpt-4o-mini", messages };
+  // [حرارة] المتخصّص يأخذ حرارة محدّدة؛ المنسّق يبقى افتراضيّاً (توجيه فقط).
+  if (!isOrchestrator) payload.temperature = tempFor(assistantId);
 
   // قائمة المساعدين (للمنسّق فقط، للتوجيه)
   let assistantsList: Array<{ id: string; display_name: string; axis: string }> = [];
@@ -360,7 +377,8 @@ Deno.serve(async (req) => {
   messages.push({ role: "tool", tool_call_id: toolCall.id, content: toolResultContent });
 
   // النداء الثاني: النموذج يكتب الجواب النهائي (بلا أدوات هذه المرّة)
-  const second = await callOpenAI({ model: "gpt-4o-mini", messages });
+  // [حرارة] نفس حرارة المتخصّص في النداء الثاني للاتّساق.
+  const second = await callOpenAI({ model: "gpt-4o-mini", messages, temperature: tempFor(assistantId) });
   if (!second.ok) return json({ status: "فشل نداء OpenAI الثاني", detail: second.detail }, 500);
   // deno-lint-ignore no-explicit-any
   const finalMsg = (second.data as any).choices[0].message;
