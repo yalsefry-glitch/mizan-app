@@ -244,9 +244,19 @@ Deno.serve(async (req) => {
   const dastur = (assistant.system_instruction ?? "").split("{{USER_NAME}}").join(firstName);
   const isOrchestrator = assistantId === "orchestrator";
 
+  // [سور] تعليمة وسم النطاق — للمتخصّص فقط. تُلزم النموذج ببدء ردّه بوسم خفيّ
+  // يلتقطه الكود: IN_SCOPE إن كان السؤال ضمن نطاق المساعد، OUT_OF_SCOPE إن كان خارجه.
+  // الكود يجرّد الوسم قبل عرض الردّ، ويستبدل الردّ برسالة رفض عند OUT_OF_SCOPE.
+  const scopeGuard = isOrchestrator ? "" :
+    "\n\n[INTERNAL SCOPE TAG — MANDATORY] Before anything else, decide if the user's message " +
+    "is within THIS assistant's domain (as defined above). Begin your reply with EXACTLY one tag " +
+    "on its own first line: write IN_SCOPE if it is within your domain, or OUT_OF_SCOPE if it is " +
+    "outside your domain (another Mizan topic, or general/non-Mizan knowledge). This tag is internal " +
+    "and will be removed before the user sees it. After the tag, continue normally per your rules.";
+
   // 7) إعداد نداء OpenAI
   const messages: Array<Record<string, unknown>> = [
-    { role: "system", content: dastur },
+    { role: "system", content: dastur + scopeGuard },
     { role: "user", content: userMessage },
   ];
   const payload: Record<string, unknown> = { model: "gpt-4o-mini", messages };
@@ -312,6 +322,20 @@ Deno.serve(async (req) => {
     return { ok: true, detail: "", data: JSON.parse(await r.text()) };
   };
 
+  // [سور] يفحص وسم النطاق في بداية ردّ المتخصّص، يجرّده، ويقرّر إن كان خارج النطاق.
+  const OUT_OF_SCOPE_REPLY =
+    "هذا السؤال خارج نطاق هذا المساعد في «ميزان». ميزان يقدّم إرشاداً نظاميّاً وإجرائيّاً سعوديّاً " +
+    "ضمن محاوره فقط. لو احتجت، ارجع إلى «ميزان العام» ليوجّهك للمساعد المناسب لسؤالك.\n\n" +
+    "«ميزان مساعد استرشادي للتوعية، والمعلومات قابلة للتغيير، ويُنصح بالرجوع إلى الجهة الرسمية المعنيّة قبل الإجراء.»";
+
+  const applyScopeGuard = (text: string): { outOfScope: boolean; clean: string } => {
+    const t = String(text ?? "").trimStart();
+    if (/^OUT_OF_SCOPE\b/i.test(t)) return { outOfScope: true, clean: OUT_OF_SCOPE_REPLY };
+    // نجرّد وسم IN_SCOPE (وأي OUT_OF_SCOPE احتياطاً) من بداية الردّ الظاهر
+    const clean = t.replace(/^(IN_SCOPE|OUT_OF_SCOPE)\b[:\-\s]*/i, "").trimStart();
+    return { outOfScope: false, clean };
+  };
+
   const first = await callOpenAI(payload);
   if (!first.ok) return json({ status: "فشل نداء OpenAI", detail: first.detail }, 500);
   // deno-lint-ignore no-explicit-any
@@ -359,7 +383,8 @@ Deno.serve(async (req) => {
   // المتخصّص: إن لم يطلب بحثاً → ردّ مباشر
   // ---------------------------------------------------------------
   if (!toolCall || toolCall.function?.name !== "web_search") {
-    return json({ ...meta, mode: "direct", reply: msg.content });
+    const g = applyScopeGuard(msg.content); // [سور]
+    return json({ ...meta, mode: g.outOfScope ? "out_of_scope" : "direct", reply: g.clean });
   }
 
   // ---------------------------------------------------------------
@@ -386,10 +411,11 @@ Deno.serve(async (req) => {
   // deno-lint-ignore no-explicit-any
   const finalMsg = (second.data as any).choices[0].message;
 
+  const gs = applyScopeGuard(finalMsg.content); // [سور]
   return json({
     ...meta,
-    mode: "direct_searched",
+    mode: gs.outOfScope ? "out_of_scope" : "direct_searched",
     search_ok: search.ok,
-    reply: finalMsg.content,
+    reply: gs.clean,
   });
 });
