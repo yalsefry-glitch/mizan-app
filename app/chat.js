@@ -19,11 +19,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { usePreventScreenCapture } from 'expo-screen-capture';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { useLang } from '../theme/LanguageContext';
 import { supabase } from '../lib/supabase';
 
 const FN_URL = 'https://lzfgjvafmvofwjiyvelq.supabase.co/functions/v1/rapid-function';
+
+// مفتاح حفظ المحادثة محليّاً على الجهاز (لكل مساعد محادثته الخاصّة).
+// الحفظ محلّي فقط: لا تُرسل المحادثات لأي خادم، حفاظاً على الخصوصية ومبدأ Zero Evidence.
+const convKey = (id) => `mizan_conv_${id || 'orchestrator'}`;
 
 // يزيل رموز التنسيق (#، *، _، `) من ردّ المساعد ليظهر النصّ نظيفاً.
 function cleanReply(text) {
@@ -37,6 +42,7 @@ function cleanReply(text) {
   out = out.replace(/__([^_]+)__/g, '$1');      // __تأكيد__
   out = out.replace(/^\s*[-*+]\s+/gm, '• ');   // نقاط القوائم → رمز موحّد
   out = out.replace(/^\s*>\s?/gm, '');          // اقتباسات
+  out = out.replace(/\n{3,}/g, '\n\n');         // تقليص الأسطر الفارغة المتتالية
   return out.trim();
 }
 
@@ -89,24 +95,54 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [loaded, setLoaded] = useState(false); // اكتمل تحميل المحادثة المحفوظة؟
   const scrollRef = useRef(null);
 
+  const greeting = { role: 'bot', text: `أنا مساعد «${assistantName}». ${t('chat_greeting')}` };
+
+  // تحميل المحادثة المحفوظة محليّاً عند فتح الشاشة، بعد التأكّد من تسجيل الدخول.
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!active) return;
       const has = !!data?.session;
       setSignedIn(has);
       setChecking(false);
       if (has) {
-        setMessages([{ role: 'bot', text: `أنا مساعد «${assistantName}». ${t('chat_greeting')}` }]);
+        try {
+          const saved = await AsyncStorage.getItem(convKey(assistantId));
+          if (active && saved) {
+            const arr = JSON.parse(saved);
+            if (Array.isArray(arr) && arr.length > 0) {
+              setMessages(arr);
+              setLoaded(true);
+              return;
+            }
+          }
+        } catch (_) { /* تجاهل أخطاء القراءة */ }
+        if (active) {
+          setMessages([greeting]);
+          setLoaded(true);
+        }
       }
     });
     return () => { active = false; };
-  }, [assistantName]);
+  }, [assistantId]);
+
+  // حفظ المحادثة محليّاً كلّما تغيّرت (بعد اكتمال التحميل، لئلّا نطمس المحفوظ).
+  useEffect(() => {
+    if (!loaded || !signedIn) return;
+    AsyncStorage.setItem(convKey(assistantId), JSON.stringify(messages)).catch(() => {});
+  }, [messages, loaded, signedIn, assistantId]);
 
   const scrollToEnd = () => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+  };
+
+  // مسح المحادثة المحفوظة محليّاً والعودة لرسالة الترحيب.
+  const clearConversation = async () => {
+    try { await AsyncStorage.removeItem(convKey(assistantId)); } catch (_) {}
+    setMessages([greeting]);
   };
 
   const send = async () => {
@@ -200,6 +236,11 @@ export default function ChatScreen() {
           <Text style={[styles.htitle, { writingDirection: writingDir }]}>{assistantName}</Text>
           <Text style={[styles.hsub, { writingDirection: writingDir }]}>{t('chat_subtitle')}</Text>
         </View>
+        {signedIn ? (
+          <Pressable style={styles.clearBtn} onPress={clearConversation} hitSlop={8}>
+            <Ionicons name="trash-outline" size={19} color={colors.goldLight} />
+          </Pressable>
+        ) : null}
       </LinearGradient>
 
       {checking ? (
@@ -310,6 +351,16 @@ const makeStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  clearBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(227,199,102,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   htitle: { fontFamily: 'Cairo_700Bold', fontSize: 18, color: '#FFFFFF' },
   hsub: { fontFamily: 'Tajawal_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, gap: 12 },
@@ -328,12 +379,12 @@ const makeStyles = (colors) => StyleSheet.create({
     marginBottom: 16,
   },
   discText: { fontFamily: 'Tajawal_400Regular', fontSize: 11.5, color: colors.textBody, lineHeight: 18, textAlign: 'center' },
-  msg: { maxWidth: '82%', padding: 12, borderRadius: 18, marginBottom: 12 },
+  msg: { maxWidth: '85%', paddingVertical: 11, paddingHorizontal: 14, borderRadius: 18, marginBottom: 11 },
   msgUser: { backgroundColor: colors.emerald, alignSelf: 'flex-end', borderBottomLeftRadius: 5 },
   msgBot: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignSelf: 'flex-start', borderBottomRightRadius: 5 },
   thinkingMsg: { paddingVertical: 14, paddingHorizontal: 18 },
-  msgUserText: { fontFamily: 'Tajawal_400Regular', fontSize: 14.5, color: '#FFFFFF', lineHeight: 24 },
-  msgBotText: { fontFamily: 'Tajawal_400Regular', fontSize: 14.5, color: colors.textDark, lineHeight: 24 },
+  msgUserText: { fontFamily: 'Tajawal_400Regular', fontSize: 15, color: '#FFFFFF', lineHeight: 26 },
+  msgBotText: { fontFamily: 'Tajawal_400Regular', fontSize: 15, color: colors.textDark, lineHeight: 26 },
   routeText: { fontFamily: 'Cairo_700Bold', fontSize: 12.5, color: colors.gold, marginTop: 9, paddingTop: 9, borderTopWidth: 1, borderTopColor: colors.border, borderStyle: 'dashed' },
   subBtn: { backgroundColor: colors.gold, borderRadius: 11, paddingVertical: 9, paddingHorizontal: 16, marginTop: 11, alignSelf: 'flex-start' },
   subBtnText: { fontFamily: 'Cairo_700Bold', fontSize: 13, color: '#3a2e08' },
