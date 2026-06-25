@@ -11,6 +11,7 @@ import {
   Animated,
   Easing,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +19,9 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as Updates from 'expo-updates';
 import { useTheme } from '../../theme/ThemeContext';
+import { useLang } from '../../theme/LanguageContext';
 import { axes } from '../../data/axes';
 import { supabase } from '../../lib/supabase';
 
@@ -26,37 +29,43 @@ const toArabic = (n) => String(n).replace(/[0-9]/g, (d) => '٠١٢٣٤٥٦٧٨٩
 const { width: SCREEN_W } = Dimensions.get('window');
 const SHIMMER_RANGE = SCREEN_W * 0.55;
 
-// جملة تعريفية موحية تحت كل محور (بدل عدّ المختصّين).
-const AXIS_TAGLINE = {
-  family: 'أسرتك وأحوالك بثقة',
-  labor: 'حقوقك ومسارك المهني',
-  finance: 'تعاملاتك المالية بثقة',
-  judicial: 'طريقك في الإجراءات العدلية',
-  cyber: 'حمايتك في العالم الرقمي',
-  emergency: 'تصرّفك وقت الحاجة',
-  development: 'نموّك المهني خطوة بخطوة',
+// جملة تعريفية موحية تحت كل محور (بدل عدّ المختصّين). مفاتيح الترجمة في القاموس.
+const AXIS_TAG_KEY = {
+  family: 'tag_family',
+  labor: 'tag_labor',
+  finance: 'tag_finance',
+  judicial: 'tag_judicial',
+  cyber: 'tag_cyber',
+  emergency: 'tag_emergency',
+  development: 'tag_development',
+};
+const AXIS_TITLE_KEY = {
+  family: 'axis_family',
+  labor: 'axis_labor',
+  finance: 'axis_finance',
+  judicial: 'axis_judicial',
+  cyber: 'axis_cyber',
+  emergency: 'axis_emergency',
+  development: 'axis_development',
 };
 
 // قاموس البحث: كلمات مفتاحية (عربي/إنجليزي/عامّية) تُوجّه لكل محور.
-// المطابقة تبحث إن احتوى نصّ المستخدم أيّاً من كلمات المحور.
 const SEARCH_INDEX = {
   family: ['اسرة', 'أسرة', 'احوال', 'أحوال', 'مدنية', 'زواج', 'طلاق', 'خلع', 'حضانة', 'نفقة', 'رؤية', 'صلح', 'عنف', 'حماية', 'توثيق', 'family', 'marriage', 'divorce', 'custody', 'alimony'],
   labor: ['عمل', 'عقود', 'عقد', 'قوى', 'مدد', 'رواتب', 'راتب', 'شكوى', 'شكاوى', 'عمالة', 'مساند', 'خادمة', 'سائق', 'تأمينات', 'تامينات', 'اجتماعية', 'جوازات', 'اقامة', 'إقامة', 'كفالة', 'نقل', 'وظيفة', 'موظف', 'labor', 'work', 'qiwa', 'mudad', 'gosi', 'insurance', 'jobs', 'residency', 'iqama'],
   finance: ['مال', 'بنك', 'بنوك', 'ساما', 'حساب', 'دعم', 'ضمان', 'مطالبة', 'مطالبات', 'تنفيذ', 'شيك', 'شيكات', 'تجارية', 'تعثر', 'إفلاس', 'افلاس', 'قرض', 'دين', 'ديون', 'تمويل', 'finance', 'bank', 'sama', 'support', 'claim', 'cheque', 'bankruptcy', 'loan', 'debt'],
   judicial: ['عدلي', 'عدل', 'ناجز', 'محكمة', 'محاكم', 'تقاضي', 'دعوى', 'قضية', 'توثيق', 'تصديق', 'وكالة', 'صك', 'اعتراض', 'مهلة', 'استئناف', 'تظلم', 'judicial', 'najiz', 'court', 'lawsuit', 'appeal', 'notary'],
-  cyber: ['احتيال', 'نصب', 'ابتزاز', 'اختراق', 'انتحال', 'هكر', 'تهديد', 'بلاغ', 'الكتروني', 'إلكتروني', 'رقمي', 'سيبراني', 'حساب مخترق', 'cyber', 'fraud', 'scam', 'extortion', 'hacking', 'phishing'],
-  emergency: ['طوارئ', 'حادث', 'حوادث', 'مروري', 'مرور', 'مخالفة', 'مخالفات', 'اعتراض مروري', 'اسعاف', 'إسعاف', 'نجم', 'ساهر', 'تأمين مركبة', 'سيارة', 'emergency', 'accident', 'traffic', 'violation', 'ambulance'],
+  cyber: ['احتيال', 'نصب', 'ابتزاز', 'اختراق', 'انتحال', 'هكر', 'تهديد', 'بلاغ', 'الكتروني', 'إلكتروني', 'رقمي', 'سيبراني', 'cyber', 'fraud', 'scam', 'extortion', 'hacking', 'phishing'],
+  emergency: ['طوارئ', 'حادث', 'حوادث', 'مروري', 'مرور', 'مخالفة', 'مخالفات', 'اسعاف', 'إسعاف', 'نجم', 'ساهر', 'سيارة', 'emergency', 'accident', 'traffic', 'violation', 'ambulance'],
   development: ['تطوير', 'تطويرك', 'مسار', 'مهني', 'ترقية', 'ترقيات', 'شهادة', 'شهادات', 'تاهيل', 'تأهيل', 'احترافية', 'ريادة', 'اعمال', 'أعمال', 'منشأة', 'منشآت', 'مشروع', 'career', 'professional', 'certificate', 'certification', 'entrepreneurship', 'startup', 'business'],
 };
 
-// يبحث في القاموس عن المحاور المطابقة لنصّ المستخدم.
 function searchAxes(query) {
   const q = (query || '').trim().toLowerCase();
   if (!q) return [];
   const matched = [];
   for (const axis of axes) {
     const kws = SEARCH_INDEX[axis.id] || [];
-    // مطابقة على الكلمات المفتاحية، أو على عنوان المحور، أو على أسماء المساعدين.
     const hit =
       kws.some((k) => q.includes(k.toLowerCase()) || k.toLowerCase().includes(q)) ||
       axis.title.toLowerCase().includes(q) ||
@@ -66,7 +75,7 @@ function searchAxes(query) {
   return matched;
 }
 
-function AxisCard({ axis, writingDir, onPress, colors, styles }) {
+function AxisCard({ axis, title, tagline, writingDir, onPress, colors, styles }) {
   const press = useRef(new Animated.Value(0)).current;
   const shimmerX = useRef(new Animated.Value(0)).current;
   const shimmerLoop = useRef(null);
@@ -121,8 +130,6 @@ function AxisCard({ axis, writingDir, onPress, colors, styles }) {
     outputRange: [-SHIMMER_RANGE, SHIMMER_RANGE],
   });
 
-  const tagline = AXIS_TAGLINE[axis.id] || axis.subtitle || '';
-
   return (
     <Animated.View style={[styles.cardWrap, { transform: [{ translateY }, { scale }] }]}>
       <Animated.View style={[styles.cardGlow, { opacity: press }]} pointerEvents="none" />
@@ -144,7 +151,7 @@ function AxisCard({ axis, writingDir, onPress, colors, styles }) {
             />
           </View>
           <Text style={[styles.cardTitle, { writingDirection: writingDir }]}>
-            {axis.title}
+            {title}
           </Text>
           <Text style={[styles.cardTag, { writingDirection: writingDir }]}>
             {tagline}
@@ -173,6 +180,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors } = useTheme();
+  const { t, lang, setLang } = useLang();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const shimmer = useRef(new Animated.Value(0)).current;
   const [query, setQuery] = useState('');
@@ -190,7 +198,7 @@ export default function HomeScreen() {
     ).start();
   }, [shimmer]);
 
-  // فحص الموافقة على الشروط: إن كان المستخدم مسجّلاً ولم يوافق بعد، يوجَّه لشاشة الشروط.
+  // فحص الموافقة على الشروط.
   useEffect(() => {
     let active = true;
     (async () => {
@@ -209,12 +217,37 @@ export default function HomeScreen() {
     return () => { active = false; };
   }, []);
 
+  // تبديل اللغة: تأكيد ثنائي اللغة، ثم ضبط الاتجاه وإعادة التشغيل لتطبيق التغيير.
+  const toggleLanguage = () => {
+    const next = lang === 'ar' ? 'en' : 'ar';
+    Alert.alert(
+      t('lang_switch_title'),
+      t('lang_switch_body'),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('continue_btn'),
+          onPress: async () => {
+            try {
+              await setLang(next);
+              const shouldBeRTL = next === 'ar';
+              I18nManager.allowRTL(true);
+              I18nManager.forceRTL(shouldBeRTL);
+              await Updates.reloadAsync();
+            } catch (e) {
+              // في حال تعذّر إعادة التشغيل (بيئة تطوير): النصوص ستتبدّل عند إعادة فتح التطبيق يدويّاً.
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const translateX = shimmer.interpolate({
     inputRange: [0, 1],
     outputRange: [-SCREEN_W, SCREEN_W],
   });
 
-  // نتائج البحث الحيّة (محاور مطابقة لنصّ البحث).
   const results = useMemo(() => searchAxes(query), [query]);
   const searching = query.trim().length > 0;
   const shown = searching ? results : axes;
@@ -262,8 +295,8 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.actions}>
-            <Pressable style={styles.hbtn}>
-              <Text style={styles.lng}>AR</Text>
+            <Pressable style={styles.hbtn} onPress={toggleLanguage}>
+              <Text style={styles.lng}>{lang === 'ar' ? 'EN' : 'AR'}</Text>
             </Pressable>
             <Pressable style={styles.hbtn} onPress={() => router.push('/notifications')}>
               <Ionicons name="notifications-outline" size={21} color={colors.goldLight} />
@@ -273,14 +306,14 @@ export default function HomeScreen() {
         </View>
 
         <Text style={[styles.tagline, { writingDirection: writingDir }]}>
-          مساعدك الذكي المتخصّص — ٣٣ مختصّاً في خدمتك
+          {t('home_tagline')}
         </Text>
 
         <View style={styles.search}>
           <Ionicons name="search" size={19} color={colors.muted} />
           <TextInput
             style={styles.searchInput}
-            placeholder="ابحث عن خدمة أو سؤال..."
+            placeholder={t('home_search_placeholder')}
             placeholderTextColor={colors.muted}
             value={query}
             onChangeText={setQuery}
@@ -296,14 +329,14 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.seclabel}>
           <View style={styles.secbar} />
-          <Text style={styles.sectionTitle}>{searching ? 'نتائج البحث' : 'المحاور'}</Text>
+          <Text style={styles.sectionTitle}>{searching ? t('home_search_results') : t('home_axes')}</Text>
         </View>
 
         {searching && shown.length === 0 ? (
           <View style={styles.noRes}>
             <Ionicons name="search-outline" size={40} color={colors.muted} />
             <Text style={[styles.noResText, { writingDirection: writingDir }]}>
-              لا نتائج مطابقة. جرّب كلمة أخرى.
+              {t('home_no_results')}
             </Text>
           </View>
         ) : (
@@ -311,7 +344,9 @@ export default function HomeScreen() {
             {!searching ? (
               <AxisCard
                 key="orchestrator"
-                axis={{ id: 'orchestrator', title: 'ميزان العام', icon: 'scale-outline', subtitle: 'نقطة انطلاقك' }}
+                axis={{ id: 'orchestrator', icon: 'scale-outline' }}
+                title={t('general_assistant')}
+                tagline={t('general_assistant_sub')}
                 writingDir={writingDir}
                 onPress={() => router.push({ pathname: '/chat', params: { name: 'ميزان العام' } })}
                 colors={colors}
@@ -322,6 +357,8 @@ export default function HomeScreen() {
               <AxisCard
                 key={axis.id}
                 axis={axis}
+                title={t(AXIS_TITLE_KEY[axis.id]) || axis.title}
+                tagline={t(AXIS_TAG_KEY[axis.id]) || ''}
                 writingDir={writingDir}
                 onPress={() => router.push({ pathname: '/experts', params: { axisId: axis.id } })}
                 colors={colors}
