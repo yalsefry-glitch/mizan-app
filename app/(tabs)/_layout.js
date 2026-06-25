@@ -24,8 +24,8 @@ import {
   Tajawal_500Medium,
   Tajawal_700Bold,
 } from '@expo-google-fonts/tajawal';
-import { ThemeProvider, useTheme } from '../theme/ThemeContext';
-import { LanguageProvider, useLang } from '../theme/LanguageContext';
+import { ThemeProvider, useTheme } from '../../theme/ThemeContext';
+import { LanguageProvider, useLang } from '../../theme/LanguageContext';
 
 // الاتجاه الافتراضي عند أول إقلاع: عربي (RTL). يُضبط لاحقاً حسب اللغة المحفوظة.
 I18nManager.allowRTL(true);
