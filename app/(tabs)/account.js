@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { supabase } from '../../lib/supabase';
 import { useTheme, THEME_LIST } from '../../theme/ThemeContext';
+import { useLang } from '../../theme/LanguageContext';
 import TurnstileWidget from '../TurnstileWidget';
 
 const BIO_KEY = 'mizan_biometric_lock';
@@ -42,12 +43,15 @@ export default function Account() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors, themeKey, setThemeKey } = useTheme();
+  const { t } = useLang();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const writingDir = I18nManager.isRTL ? 'rtl' : 'ltr';
 
   const [checking, setChecking] = useState(true);
   const [session, setSession] = useState(null);
+  const [profileName, setProfileName] = useState('');
   const [mode, setMode] = useState('signin'); // signin | signup
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -60,23 +64,36 @@ export default function Account() {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setChecking(false);
+      if (data.session?.user?.id) loadProfileName(data.session.user.id);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+      if (s?.user?.id) loadProfileName(s.user.id);
+      else setProfileName('');
+    });
     AsyncStorage.getItem(BIO_KEY).then((v) => setBioEnabled(v === 'true'));
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  // يقرأ اسم المستخدم من ملفّه لعرضه بدل الإيميل.
+  async function loadProfileName(uid) {
+    try {
+      const { data } = await supabase.from('profiles').select('full_name').eq('id', uid).single();
+      if (data?.full_name) setProfileName(data.full_name);
+    } catch (_) { /* تجاهل */ }
+  }
 
   async function toggleBiometric(value) {
     if (value) {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
       if (!hasHardware || !enrolled) {
-        Alert.alert('غير متاح', 'جهازك لا يدعم البصمة أو لا توجد بصمة مسجّلة في إعدادات الجهاز.');
+        Alert.alert(t('acc_bio_unavailable'), t('acc_bio_no_hw'));
         return;
       }
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'أكّد بصمتك لتفعيل القفل',
-        cancelLabel: 'إلغاء',
+        promptMessage: t('acc_bio_confirm'),
+        cancelLabel: t('cancel'),
       });
       if (!result.success) return;
       await AsyncStorage.setItem(BIO_KEY, 'true');
@@ -89,11 +106,11 @@ export default function Account() {
 
   async function signIn() {
     if (!email.trim() || !password) {
-      Alert.alert('تنبيه', 'يرجى إدخال البريد وكلمة المرور.');
+      Alert.alert(t('acc_alert_notice'), t('acc_need_credentials'));
       return;
     }
     if (!captchaToken) {
-      Alert.alert('تأكيد الأمان', 'يرجى الانتظار حتى يكتمل التحقّق الأمني ثم حاول مجدداً.');
+      Alert.alert(t('acc_security_check'), t('acc_wait_captcha'));
       return;
     }
     setBusy(true);
@@ -104,28 +121,39 @@ export default function Account() {
     });
     setBusy(false);
     resetCaptcha();
-    if (error) Alert.alert('تعذّر الدخول', error.message);
+    if (error) Alert.alert(t('acc_signin_failed'), error.message);
   }
 
   async function signUp() {
+    if (!name.trim()) {
+      Alert.alert(t('acc_alert_notice'), t('acc_need_name'));
+      return;
+    }
     if (!email.trim() || !password) {
-      Alert.alert('تنبيه', 'يرجى إدخال البريد وكلمة المرور.');
+      Alert.alert(t('acc_alert_notice'), t('acc_need_credentials'));
       return;
     }
     if (!captchaToken) {
-      Alert.alert('تأكيد الأمان', 'يرجى الانتظار حتى يكتمل التحقّق الأمني ثم حاول مجدداً.');
+      Alert.alert(t('acc_security_check'), t('acc_wait_captcha'));
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { captchaToken },
+      options: { captchaToken, data: { full_name: name.trim() } },
     });
+    // نخزّن الاسم في ملفّ المستخدم إن توفّرت جلسة فورية.
+    const uid = data?.user?.id;
+    if (uid && !error) {
+      try {
+        await supabase.from('profiles').update({ full_name: name.trim() }).eq('id', uid);
+      } catch (_) { /* تجاهل، الاسم محفوظ في بيانات المصادقة */ }
+    }
     setBusy(false);
     resetCaptcha();
-    if (error) Alert.alert('تعذّر إنشاء الحساب', error.message);
-    else Alert.alert('تحقّق من بريدك', 'أُرسل رابط التفعيل إلى بريدك الإلكتروني.');
+    if (error) Alert.alert(t('acc_signup_failed'), error.message);
+    else Alert.alert(t('acc_check_email'), t('acc_verify_sent'));
   }
 
   function resetCaptcha() {
@@ -135,19 +163,19 @@ export default function Account() {
 
   async function forgotPassword() {
     if (!email.trim()) {
-      Alert.alert('نسيت كلمة المرور', 'اكتب بريدك الإلكتروني أولاً، ثم اضغط نسيت كلمة المرور.');
+      Alert.alert(t('acc_forgot_title'), t('acc_forgot_hint'));
       return;
     }
     if (!captchaToken) {
-      Alert.alert('تأكيد الأمان', 'يرجى الانتظار حتى يكتمل التحقّق الأمني ثم حاول مجدداً.');
+      Alert.alert(t('acc_security_check'), t('acc_wait_captcha'));
       return;
     }
     setBusy(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { captchaToken });
     setBusy(false);
     resetCaptcha();
-    if (error) Alert.alert('تعذّر الإرسال', error.message);
-    else Alert.alert('تحقّق من بريدك', 'أُرسل رابط استعادة كلمة المرور إلى بريدك.');
+    if (error) Alert.alert(t('acc_send_failed'), error.message);
+    else Alert.alert(t('acc_check_email'), t('acc_reset_sent'));
   }
 
   async function signOut() {
@@ -156,22 +184,22 @@ export default function Account() {
 
   function confirmDeleteAccount() {
     Alert.alert(
-      'حذف الحساب',
-      'سيُحذف حسابك وكل بياناتك نهائيّاً، ولا يمكن التراجع. هل تريد المتابعة؟',
+      t('acc_del_title'),
+      t('acc_del_warn'),
       [
-        { text: 'إلغاء', style: 'cancel' },
-        { text: 'متابعة', style: 'destructive', onPress: secondConfirmDelete },
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('continue_btn'), style: 'destructive', onPress: secondConfirmDelete },
       ],
     );
   }
 
   function secondConfirmDelete() {
     Alert.alert(
-      'تأكيد نهائي',
-      'هذا إجراء نهائي لا رجعة فيه. أتأكّد حذف الحساب؟',
+      t('acc_del_final_title'),
+      t('acc_del_final'),
       [
-        { text: 'إلغاء', style: 'cancel' },
-        { text: 'حذف نهائيّاً', style: 'destructive', onPress: doDeleteAccount },
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('acc_del_final_btn'), style: 'destructive', onPress: doDeleteAccount },
       ],
     );
   }
@@ -183,7 +211,7 @@ export default function Account() {
       const token = sess?.session?.access_token;
       if (!token) {
         setBusy(false);
-        Alert.alert('تعذّر الحذف', 'انتهت الجلسة. سجّل دخولك ثم حاول مجدداً.');
+        Alert.alert(t('acc_del_failed'), t('acc_del_session_end'));
         return;
       }
       const res = await fetch(DELETE_FN_URL, {
@@ -194,13 +222,13 @@ export default function Account() {
       setBusy(false);
       if (data.status === 'deleted') {
         await supabase.auth.signOut();
-        Alert.alert('تم الحذف', 'تم حذف حسابك وبياناتك بالكامل.');
+        Alert.alert(t('acc_del_done_title'), t('acc_del_done'));
       } else {
-        Alert.alert('تعذّر الحذف', 'حدث خطأ أثناء حذف الحساب. حاول لاحقاً.');
+        Alert.alert(t('acc_del_failed'), t('acc_del_error'));
       }
     } catch (e) {
       setBusy(false);
-      Alert.alert('تعذّر الحذف', 'تحقّق من الاتصال وحاول مجدداً.');
+      Alert.alert(t('acc_del_failed'), t('acc_del_conn'));
     }
   }
 
@@ -214,6 +242,7 @@ export default function Account() {
 
   // مسجّل دخول: لوحة الحساب
   if (session) {
+    const displayName = profileName || session.user?.email;
     return (
       <View style={styles.root}>
         <StatusBar style="light" />
@@ -223,7 +252,7 @@ export default function Account() {
           end={{ x: 1, y: 1 }}
           style={[styles.head, { paddingTop: insets.top + 18 }]}
         >
-          <Text style={styles.headTitle}>حسابي</Text>
+          <Text style={styles.headTitle}>{t('acc_my_account')}</Text>
         </LinearGradient>
 
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -231,24 +260,24 @@ export default function Account() {
             <View style={styles.avatar}>
               <Ionicons name="person" size={28} color={colors.goldLight} />
             </View>
-            <Text style={[styles.emailText, { writingDirection: writingDir }]}>{session.user?.email}</Text>
-            <Text style={[styles.planText, { writingDirection: writingDir }]}>حساب نشط</Text>
+            <Text style={[styles.emailText, { writingDirection: writingDir }]}>{displayName}</Text>
+            <Text style={[styles.planText, { writingDirection: writingDir }]}>{t('acc_active')}</Text>
           </View>
 
           {/* مبدّل الثيمات */}
           <View style={styles.themeCard}>
-            <Text style={[styles.themeTitle, { writingDirection: writingDir }]}>المظهر</Text>
+            <Text style={[styles.themeTitle, { writingDirection: writingDir }]}>{t('acc_appearance')}</Text>
             <View style={styles.themeRow}>
-              {THEME_LIST.map((t) => {
-                const selected = t.key === themeKey;
+              {THEME_LIST.map((th) => {
+                const selected = th.key === themeKey;
                 return (
                   <Pressable
-                    key={t.key}
+                    key={th.key}
                     style={[styles.themeChip, selected && styles.themeChipSel]}
-                    onPress={() => setThemeKey(t.key)}
+                    onPress={() => setThemeKey(th.key)}
                   >
-                    <View style={[styles.themeDot, { backgroundColor: t.emerald, borderColor: t.gold }]} />
-                    <Text style={[styles.themeName, selected && styles.themeNameSel]}>{t.name}</Text>
+                    <View style={[styles.themeDot, { backgroundColor: th.emerald, borderColor: th.gold }]} />
+                    <Text style={[styles.themeName, selected && styles.themeNameSel]}>{th.name}</Text>
                   </Pressable>
                 );
               })}
@@ -259,7 +288,7 @@ export default function Account() {
             <Pressable style={styles.settingRow} onPress={() => router.push('/notifications')}>
               <View style={styles.settingLabel}>
                 <Ionicons name="notifications-outline" size={19} color={colors.textBody} />
-                <Text style={[styles.settingText, { writingDirection: writingDir }]}>الإشعارات</Text>
+                <Text style={[styles.settingText, { writingDirection: writingDir }]}>{t('acc_notifications')}</Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={colors.muted} />
             </Pressable>
@@ -267,7 +296,7 @@ export default function Account() {
             <View style={styles.settingRow}>
               <View style={styles.settingLabel}>
                 <Ionicons name="finger-print-outline" size={19} color={colors.textBody} />
-                <Text style={[styles.settingText, { writingDirection: writingDir }]}>قفل بالبصمة</Text>
+                <Text style={[styles.settingText, { writingDirection: writingDir }]}>{t('acc_bio_lock')}</Text>
               </View>
               <Switch
                 value={bioEnabled}
@@ -280,7 +309,7 @@ export default function Account() {
             <Pressable style={styles.settingRow} onPress={() => router.push('/privacy')}>
               <View style={styles.settingLabel}>
                 <Ionicons name="document-text-outline" size={19} color={colors.textBody} />
-                <Text style={[styles.settingText, { writingDirection: writingDir }]}>الشروط والخصوصية</Text>
+                <Text style={[styles.settingText, { writingDirection: writingDir }]}>{t('acc_terms_privacy')}</Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={colors.muted} />
             </Pressable>
@@ -288,7 +317,7 @@ export default function Account() {
             <Pressable style={styles.settingRow} onPress={signOut}>
               <View style={styles.settingLabel}>
                 <Ionicons name="log-out-outline" size={19} color={colors.muted} />
-                <Text style={[styles.settingText, { writingDirection: writingDir, color: colors.muted }]}>تسجيل الخروج</Text>
+                <Text style={[styles.settingText, { writingDirection: writingDir, color: colors.muted }]}>{t('acc_signout')}</Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={colors.muted} />
             </Pressable>
@@ -296,7 +325,7 @@ export default function Account() {
             <Pressable style={styles.settingRow} onPress={confirmDeleteAccount}>
               <View style={styles.settingLabel}>
                 <Ionicons name="trash-outline" size={19} color="#C0392B" />
-                <Text style={[styles.settingText, { writingDirection: writingDir, color: '#C0392B' }]}>حذف الحساب</Text>
+                <Text style={[styles.settingText, { writingDirection: writingDir, color: '#C0392B' }]}>{t('acc_delete')}</Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={colors.muted} />
             </Pressable>
@@ -316,14 +345,24 @@ export default function Account() {
         end={{ x: 1, y: 1 }}
         style={[styles.head, { paddingTop: insets.top + 18 }]}
       >
-        <Text style={styles.headTitle}>{mode === 'signin' ? 'تسجيل الدخول' : 'إنشاء حساب'}</Text>
+        <Text style={styles.headTitle}>{mode === 'signin' ? t('acc_signin') : t('acc_signup')}</Text>
       </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
+          {mode === 'signup' ? (
+            <TextInput
+              style={[styles.input, { writingDirection: writingDir }]}
+              placeholder={t('acc_name_ph')}
+              placeholderTextColor={colors.muted}
+              autoCapitalize="words"
+              value={name}
+              onChangeText={setName}
+            />
+          ) : null}
           <TextInput
             style={[styles.input, { writingDirection: writingDir }]}
-            placeholder="البريد الإلكتروني"
+            placeholder={t('acc_email_ph')}
             placeholderTextColor={colors.muted}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -333,7 +372,7 @@ export default function Account() {
           <View style={styles.pwWrap}>
             <TextInput
               style={[styles.input, styles.pwInput, { writingDirection: writingDir }]}
-              placeholder="كلمة المرور"
+              placeholder={t('acc_password_ph')}
               placeholderTextColor={colors.muted}
               secureTextEntry={!showPw}
               autoCapitalize="none"
@@ -347,14 +386,14 @@ export default function Account() {
 
           {mode === 'signin' ? (
             <Pressable onPress={forgotPassword}>
-              <Text style={[styles.forgot, { writingDirection: writingDir }]}>نسيت كلمة المرور؟</Text>
+              <Text style={[styles.forgot, { writingDirection: writingDir }]}>{t('acc_forgot')}</Text>
             </Pressable>
           ) : null}
 
           <View style={styles.captchaBox}>
             <TurnstileWidget
               key={captchaKey}
-              onToken={(t) => setCaptchaToken(t)}
+              onToken={(tok) => setCaptchaToken(tok)}
               onError={() => setCaptchaToken('')}
             />
           </View>
@@ -363,28 +402,28 @@ export default function Account() {
             {busy ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.primaryBtnText}>{mode === 'signin' ? 'دخول' : 'إنشاء الحساب'}</Text>
+              <Text style={styles.primaryBtnText}>{mode === 'signin' ? t('acc_btn_signin') : t('acc_btn_signup')}</Text>
             )}
           </Pressable>
 
           <View style={styles.orRow}>
             <View style={styles.orLine} />
-            <Text style={styles.orText}>أو</Text>
+            <Text style={styles.orText}>{t('acc_or')}</Text>
             <View style={styles.orLine} />
           </View>
 
           <Pressable
             style={styles.googleBtn}
-            onPress={() => Alert.alert('قريباً', 'الدخول عبر Google سيُفعّل قريباً.')}
+            onPress={() => Alert.alert(t('acc_soon'), t('acc_google_soon'))}
           >
             <GoogleLogo size={20} />
-            <Text style={styles.googleBtnText}>المتابعة عبر Google</Text>
+            <Text style={styles.googleBtnText}>{t('acc_google')}</Text>
           </Pressable>
         </View>
 
         <Pressable onPress={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
           <Text style={[styles.switchText, { writingDirection: writingDir }]}>
-            {mode === 'signin' ? 'ليس لديك حساب؟ إنشاء حساب' : 'لديك حساب؟ تسجيل الدخول'}
+            {mode === 'signin' ? t('acc_to_signup') : t('acc_to_signin')}
           </Text>
         </Pressable>
       </ScrollView>
