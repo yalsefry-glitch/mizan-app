@@ -308,7 +308,7 @@ export default function ChatScreen() {
             ) : null}
           </ScrollView>
 
-          <View style={[styles.inputBar, { paddingBottom: insets.bottom + 10 }]}>
+          <View style={[styles.inputBar, { paddingBottom: 10 }]}>
             <Pressable style={styles.micBtn} onPress={() => {}}>
               <Ionicons name="mic-outline" size={21} color={colors.emerald} />
             </Pressable>
