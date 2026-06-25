@@ -39,6 +39,22 @@ export const STRINGS = {
   tag_emergency: { ar: 'تصرّفك وقت الحاجة', en: 'What to do when it matters' },
   tag_development: { ar: 'نموّك المهني خطوة بخطوة', en: 'Your professional growth, step by step' },
 
+  // المحادثة
+  chat_subtitle: { ar: 'مساعد استرشادي', en: 'Guidance assistant' },
+  chat_input_placeholder: { ar: 'اكتب سؤالك...', en: 'Type your question...' },
+  chat_greeting: { ar: 'اطرح سؤالك، كيف أخدمك اليوم؟', en: 'Ask your question — how can I help you today?' },
+  chat_gate_title: { ar: 'يلزم تسجيل الدخول', en: 'Sign in required' },
+  chat_gate_note: { ar: 'لبدء المحادثة مع مساعدي ميزان، سجّل دخولك أولاً.', en: 'To start chatting with Mizan assistants, please sign in first.' },
+  chat_gate_btn: { ar: 'الذهاب لتسجيل الدخول', en: 'Go to sign in' },
+  chat_rate_limited: { ar: 'أرسلت الطلبات بسرعة كبيرة. انتظر لحظةً ثم حاول مرة أخرى.', en: 'You are sending requests too quickly. Please wait a moment and try again.' },
+  chat_subscribe_msg: { ar: 'لقد استفدت من رسائلك المجانية. للاستمرار والوصول إلى المختصّين، يمكنك الاشتراك.', en: 'You have used your free messages. To continue and reach the specialists, you can subscribe.' },
+  chat_routed_msg: { ar: 'سؤالك يخصّ مجالاً متخصّصاً، وأنصح بالتحدّث مع المختصّ المناسب.', en: 'Your question relates to a specialized area. I recommend talking to the right specialist.' },
+  chat_route_suggest: { ar: 'المختصّ المقترح:', en: 'Suggested specialist:' },
+  chat_show_plans: { ar: 'عرض الباقات', en: 'View plans' },
+  chat_reply_fallback: { ar: 'تعذّر الحصول على ردّ الآن. حاول مرة أخرى.', en: 'Could not get a reply right now. Please try again.' },
+  chat_conn_error: { ar: 'حدث خطأ في الاتصال. تحقّق من الإنترنت وحاول مجدداً.', en: 'A connection error occurred. Check your internet and try again.' },
+  chat_disclaimer: { ar: 'ميزان مساعد استرشادي للتوعية، والمعلومات قابلة للتغيير، ويُنصح بالرجوع إلى الجهة الرسمية المعنيّة قبل الإجراء.', en: 'Mizan is an awareness guidance assistant. Information may change; please refer to the relevant official authority before taking action.' },
+
   // عامّة
   start_chat: { ar: 'ابدأ المحادثة', en: 'Start chat' },
   back: { ar: 'العودة', en: 'Back' },
