@@ -1,18 +1,20 @@
 // محاور ميزان السبعة ومساعدوها — مطابقة لقاعدة البيانات (جدول assistants)
-// كل خبير: { id: معرّف المساعد في الخادم, name: اسمه العربي }
+// كل خبير: { id: معرّف المساعد في الخادم, name: اسمه المعروض }
+// الأسماء بهوية «ميزان ×» (بلا أسماء جهات رسمية). المعرّفات (id) ثابتة لا تتغيّر
+// حفاظاً على ربط الدساتير في الخادم — عدا تقسيم المطالبات/التنفيذ (معرّفان جديدان).
 export const axes = [
   {
     id: 'family',
     title: 'الأسرة والأحوال',
     icon: 'people-outline',
     experts: [
-      { id: 'family_civil_affairs', name: 'الأحوال المدنية' },
-      { id: 'family_marriage', name: 'الزواج والتوثيق' },
-      { id: 'family_divorce', name: 'الطلاق والخلع' },
-      { id: 'family_custody', name: 'الحضانة والرؤية' },
-      { id: 'family_alimony', name: 'النفقة' },
-      { id: 'family_reconciliation', name: 'الصلح والتراضي الأسري' },
-      { id: 'family_protection', name: 'العنف الأسري والحماية' },
+      { id: 'family_civil_affairs', name: 'ميزان الهوية' },
+      { id: 'family_marriage', name: 'ميزان الزواج' },
+      { id: 'family_divorce', name: 'ميزان الطلاق' },
+      { id: 'family_custody', name: 'ميزان الحضانة' },
+      { id: 'family_alimony', name: 'ميزان النفقة' },
+      { id: 'family_reconciliation', name: 'ميزان الصلح الأسري' },
+      { id: 'family_protection', name: 'ميزان الحماية الأسرية' },
     ],
   },
   {
@@ -20,12 +22,12 @@ export const axes = [
     title: 'العمل والأفراد',
     icon: 'briefcase-outline',
     experts: [
-      { id: 'qiwa_contracts', name: 'قوى والعقود' },
-      { id: 'mudad', name: 'مُدد' },
-      { id: 'labor_complaints', name: 'الشكاوى العمالية' },
-      { id: 'musaned', name: 'العمالة المنزلية (مساند)' },
-      { id: 'social_insurance', name: 'التأمينات الاجتماعية' },
-      { id: 'passports_residency', name: 'الجوازات والإقامة' },
+      { id: 'qiwa_contracts', name: 'ميزان عقود العمل' },
+      { id: 'mudad', name: 'ميزان الأجور' },
+      { id: 'labor_complaints', name: 'ميزان الشكاوى العمالية' },
+      { id: 'musaned', name: 'ميزان العمالة المنزلية' },
+      { id: 'social_insurance', name: 'ميزان التأمينات' },
+      { id: 'passports_residency', name: 'ميزان الوافدين' },
     ],
   },
   {
@@ -33,11 +35,12 @@ export const axes = [
     title: 'المال والتعاملات',
     icon: 'cash-outline',
     experts: [
-      { id: 'banks_sama', name: 'البنوك والساما' },
-      { id: 'support_daman', name: 'الدعم والضمان' },
-      { id: 'claims_enforcement', name: 'المطالبات والتنفيذ' },
-      { id: 'cheques_commercial_papers', name: 'الشيكات والأوراق التجارية' },
-      { id: 'default_bankruptcy', name: 'التعثّر والإفلاس' },
+      { id: 'banks_sama', name: 'ميزان المصرفي' },
+      { id: 'support_daman', name: 'ميزان الدعم' },
+      { id: 'claims', name: 'ميزان المطالبات' },
+      { id: 'enforcement', name: 'ميزان التنفيذ' },
+      { id: 'cheques_commercial_papers', name: 'ميزان الأوراق التجارية' },
+      { id: 'default_bankruptcy', name: 'ميزان التعثّر' },
     ],
   },
   {
@@ -45,10 +48,10 @@ export const axes = [
     title: 'المساعد العدلي',
     icon: 'business-outline',
     experts: [
-      { id: 'judicial_litigation', name: 'المنصّات العدلية والتقاضي' },
-      { id: 'judicial_documentation', name: 'التوثيق والتصديق' },
-      { id: 'judicial_reconciliation', name: 'الصلح والتراضي القضائي العام' },
-      { id: 'judicial_objections', name: 'الاعتراض والمهل والاستحقاقات' },
+      { id: 'judicial_litigation', name: 'ميزان التقاضي' },
+      { id: 'judicial_documentation', name: 'ميزان التوثيق' },
+      { id: 'judicial_reconciliation', name: 'ميزان الصلح القضائي' },
+      { id: 'judicial_objections', name: 'ميزان المهل والاعتراض' },
     ],
   },
   {
@@ -56,10 +59,10 @@ export const axes = [
     title: 'مخالفات رقمية',
     icon: 'shield-outline',
     experts: [
-      { id: 'financial_fraud', name: 'الاحتيال المالي الرقمي' },
-      { id: 'electronic_extortion', name: 'الابتزاز الإلكتروني' },
-      { id: 'identity_hacking', name: 'انتحال الهوية والاختراق' },
-      { id: 'post_report', name: 'ما بعد البلاغ' },
+      { id: 'financial_fraud', name: 'ميزان الاحتيال الرقمي' },
+      { id: 'electronic_extortion', name: 'ميزان الابتزاز' },
+      { id: 'identity_hacking', name: 'ميزان الاختراق' },
+      { id: 'post_report', name: 'ميزان ما بعد البلاغ' },
     ],
   },
   {
@@ -67,10 +70,10 @@ export const axes = [
     title: 'الطوارئ والحوادث',
     icon: 'alert-circle-outline',
     experts: [
-      { id: 'traffic_accidents', name: 'الحوادث المرورية' },
-      { id: 'traffic_violations', name: 'المخالفات والاعتراض المروري' },
-      { id: 'emergency_firstaid', name: 'الطوارئ والإسعاف' },
-      { id: 'vehicle_insurance', name: 'التأمين على المركبات' },
+      { id: 'traffic_accidents', name: 'ميزان الحوادث' },
+      { id: 'traffic_violations', name: 'ميزان المخالفات المرورية' },
+      { id: 'emergency_firstaid', name: 'ميزان الطوارئ' },
+      { id: 'vehicle_insurance', name: 'ميزان تأمين المركبات' },
     ],
   },
   {
@@ -78,9 +81,9 @@ export const axes = [
     title: 'تطويرك',
     icon: 'trending-up-outline',
     experts: [
-      { id: 'career_path', name: 'المسارات المهنية والترقيات' },
-      { id: 'professional_certs', name: 'الشهادات والتأهيل المهني' },
-      { id: 'entrepreneurship', name: 'ريادة الأعمال والمنشآت' },
+      { id: 'career_path', name: 'ميزان المسار المهني' },
+      { id: 'professional_certs', name: 'ميزان الشهادات' },
+      { id: 'entrepreneurship', name: 'ميزان ريادة الأعمال' },
     ],
   },
 ];
