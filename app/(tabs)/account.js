@@ -27,6 +27,21 @@ import TurnstileWidget from '../TurnstileWidget';
 const BIO_KEY = 'mizan_biometric_lock';
 const DELETE_FN_URL = 'https://lzfgjvafmvofwjiyvelq.supabase.co/functions/v1/delete-account';
 
+// اسم معروض نظيف: إن وُجد اسم المستخدم نعرضه، وإلا نأخذ الجزء قبل @ من الإيميل
+// ونجمّله (نبدّل النقاط/الشرطات بمسافات ونرفع أوّل كل كلمة) بدل عرض الإيميل الكامل.
+function cleanDisplayName(profileName, email) {
+  if (profileName && profileName.trim()) return profileName.trim();
+  const raw = String(email || '').split('@')[0] || '';
+  if (!raw) return '';
+  return raw
+    .replace(/[._-]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
 // شعار Google الرسمي (حرف G بالألوان الأربعة)
 function GoogleLogo({ size = 20 }) {
   return (
@@ -242,7 +257,7 @@ export default function Account() {
 
   // مسجّل دخول: لوحة الحساب
   if (session) {
-    const displayName = profileName || session.user?.email;
+    const displayName = cleanDisplayName(profileName, session.user?.email);
     return (
       <View style={styles.root}>
         <StatusBar style="light" />
@@ -255,12 +270,15 @@ export default function Account() {
           <Text style={styles.headTitle}>{t('acc_my_account')}</Text>
         </LinearGradient>
 
-        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.bodyAccount}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.card}>
             <View style={styles.avatar}>
               <Ionicons name="person" size={28} color={colors.goldLight} />
             </View>
-            <Text style={[styles.emailText, { writingDirection: writingDir }]}>{displayName}</Text>
+            <Text style={[styles.emailText, { writingDirection: writingDir }]} numberOfLines={1}>{displayName}</Text>
             <Text style={[styles.planText, { writingDirection: writingDir }]}>{t('acc_active')}</Text>
           </View>
 
@@ -442,6 +460,8 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   headTitle: { fontFamily: 'Cairo_700Bold', fontSize: 20, color: '#FFFFFF' },
   body: { padding: 18, paddingBottom: 40 },
+  // محتوى شاشة الحساب: يملأ الشاشة دون تمرير زائد إن كان أقصر منها.
+  bodyAccount: { padding: 18, paddingBottom: 24, flexGrow: 1 },
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
@@ -532,14 +552,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   googleBtnText: { fontFamily: 'Cairo_700Bold', fontSize: 14.5, color: colors.textDark },
   switchText: { fontFamily: 'Tajawal_500Medium', fontSize: 14, color: colors.emerald, textAlign: 'center', marginTop: 18 },
-  settingsCard: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    marginTop: 14,
-  },
+  settingsCard: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 16, marginTop: 14 },
   settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 15 },
   settingLabel: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   settingText: { fontFamily: 'Tajawal_500Medium', fontSize: 15, color: colors.textDark },
