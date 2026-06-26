@@ -13,7 +13,7 @@ export const STRINGS = {
   tab_account: { ar: 'حسابي', en: 'Account' },
 
   // الرئيسية
-  home_tagline: { ar: 'مساعدك الذكي المتخصّص — ٣٣ مختصّاً في خدمتك', en: 'Your smart specialized assistant — 33 experts at your service' },
+  home_tagline: { ar: 'دليلك للإجراءات والخدمات، خطوة بخطوة.', en: 'Your guide to procedures, step by step.' },
   home_search_placeholder: { ar: 'ابحث عن خدمة أو سؤال...', en: 'Search for a service or question...' },
   home_axes: { ar: 'المحاور', en: 'Categories' },
   home_search_results: { ar: 'نتائج البحث', en: 'Search Results' },
@@ -23,21 +23,21 @@ export const STRINGS = {
 
   // عناوين المحاور
   axis_family: { ar: 'الأسرة والأحوال', en: 'Family & Status' },
-  axis_labor: { ar: 'العمل والأفراد', en: 'Work & Individuals' },
+  axis_labor: { ar: 'العمل والأفراد', en: 'Work & Labor' },
   axis_finance: { ar: 'المال والتعاملات', en: 'Money & Transactions' },
-  axis_judicial: { ar: 'المساعد العدلي', en: 'Justice Assistant' },
-  axis_cyber: { ar: 'مخالفات رقمية', en: 'Digital Offenses' },
-  axis_emergency: { ar: 'الطوارئ والحوادث', en: 'Emergencies & Accidents' },
+  axis_judicial: { ar: 'المساعد العدلي', en: 'Judicial Assistant' },
+  axis_cyber: { ar: 'مخالفات رقمية', en: 'Digital Crimes' },
+  axis_emergency: { ar: 'الطوارئ والحوادث', en: 'Emergencies' },
   axis_development: { ar: 'تطويرك', en: 'Your Growth' },
 
-  // الجمل التعريفية للمحاور
-  tag_family: { ar: 'أسرتك وأحوالك بثقة', en: 'Your family matters, with confidence' },
-  tag_labor: { ar: 'حقوقك ومسارك المهني', en: 'Your rights and career path' },
+  // الجمل التعريفية للمحاور (مختصرة، متناسقة)
+  tag_family: { ar: 'أسرتك وأحوالك بثقة', en: 'Family matters, with confidence' },
+  tag_labor: { ar: 'حقوقك ومسارك المهني', en: 'Your rights and career' },
   tag_finance: { ar: 'تعاملاتك المالية بثقة', en: 'Your finances, with confidence' },
-  tag_judicial: { ar: 'إجراءاتك العدلية بوضوح', en: 'Your path through legal procedures' },
-  tag_cyber: { ar: 'حمايتك في العالم الرقمي', en: 'Your protection in the digital world' },
+  tag_judicial: { ar: 'إجراءاتك العدلية بوضوح', en: 'Judicial steps, made clear' },
+  tag_cyber: { ar: 'حمايتك في العالم الرقمي', en: 'Your digital protection' },
   tag_emergency: { ar: 'تصرّفك وقت الحاجة', en: 'What to do when it matters' },
-  tag_development: { ar: 'نموّك المهني خطوة بخطوة', en: 'Your professional growth, step by step' },
+  tag_development: { ar: 'نموّك المهني خطوة بخطوة', en: 'Your growth, step by step' },
 
   // المحادثة
   chat_subtitle: { ar: 'مساعد استرشادي', en: 'Guidance assistant' },
@@ -51,6 +51,9 @@ export const STRINGS = {
   chat_routed_msg: { ar: 'سؤالك يخصّ مجالاً متخصّصاً، وأنصح بالتحدّث مع المختصّ المناسب.', en: 'Your question relates to a specialized area. I recommend talking to the right specialist.' },
   chat_route_suggest: { ar: 'المختصّ المقترح:', en: 'Suggested specialist:' },
   chat_show_plans: { ar: 'عرض الباقات', en: 'View plans' },
+  chat_copied: { ar: 'تم نسخ النص', en: 'Text copied' },
+  chat_typing: { ar: 'يكتب الآن...', en: 'Typing...' },
+  chat_go_to: { ar: 'انتقل إلى', en: 'Go to' },
   chat_reply_fallback: { ar: 'تعذّر الحصول على ردّ الآن. حاول مرة أخرى.', en: 'Could not get a reply right now. Please try again.' },
   chat_conn_error: { ar: 'حدث خطأ في الاتصال. تحقّق من الإنترنت وحاول مجدداً.', en: 'A connection error occurred. Check your internet and try again.' },
   chat_disclaimer: { ar: 'ميزان مساعد استرشادي للتوعية، والمعلومات قابلة للتغيير، ويُنصح بالرجوع إلى الجهة الرسمية المعنيّة قبل الإجراء.', en: 'Mizan is an awareness guidance assistant. Information may change; please refer to the relevant official authority before taking action.' },
@@ -141,9 +144,9 @@ export const STRINGS = {
   cancel: { ar: 'إلغاء', en: 'Cancel' },
   loading: { ar: 'جارٍ التحميل...', en: 'Loading...' },
 
-  // مربّع تبديل اللغة
-  lang_switch_title: { ar: 'تغيير اللغة', en: 'Change language' },
-  lang_switch_body: { ar: 'سيُعاد تشغيل التطبيق لتطبيق تغيير اللغة. هل تريد المتابعة؟', en: 'The app will restart to apply the language change. Continue?' },
+  // مربّع تبديل اللغة (صياغة أوضح بهوية ميزان)
+  lang_switch_title: { ar: 'تغيير لغة ميزان', en: 'Change Mizan language' },
+  lang_switch_body: { ar: 'لتطبيق اللغة الجديدة، سيُعيد ميزان تشغيل نفسه تلقائيّاً. كل بياناتك محفوظة.', en: 'To apply the new language, Mizan will restart automatically. All your data is saved.' },
 };
 
 // دالّة الترجمة: تُرجع نصّ المفتاح باللغة الحالية.
