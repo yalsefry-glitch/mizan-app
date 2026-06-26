@@ -18,7 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { usePreventScreenCapture } from 'expo-screen-capture';
+import * as ScreenCapture from 'expo-screen-capture';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { useLang } from '../theme/LanguageContext';
@@ -76,9 +76,6 @@ function ThinkingScale({ colors }) {
 }
 
 export default function ChatScreen() {
-  // منع تصوير الشاشة داخل المحادثة (يُفعّل عند الدخول، ويُلغى تلقائيّاً عند الخروج).
-  usePreventScreenCapture();
-
   const insets = useSafeAreaInsets();
   const keyboardVisible = useKeyboardState((state) => state.isVisible);
   const router = useRouter();
@@ -93,6 +90,7 @@ export default function ChatScreen() {
   const writingDir = I18nManager.isRTL ? 'rtl' : 'ltr';
   const [checking, setChecking] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -100,6 +98,16 @@ export default function ChatScreen() {
   const scrollRef = useRef(null);
 
   const greeting = { role: 'bot', text: `أنا مساعد «${assistantName}». ${t('chat_greeting')}` };
+
+  // منع تصوير الشاشة داخل المحادثة — للمستخدم العادي فقط. الأدمن مُعفى (للمعاينة والتوثيق).
+  useEffect(() => {
+    if (isAdmin) {
+      ScreenCapture.allowScreenCaptureAsync().catch(() => {});
+      return;
+    }
+    ScreenCapture.preventScreenCaptureAsync().catch(() => {});
+    return () => { ScreenCapture.allowScreenCaptureAsync().catch(() => {}); };
+  }, [isAdmin]);
 
   // تحميل المحادثة المحفوظة محليّاً عند فتح الشاشة، بعد التأكّد من تسجيل الدخول.
   useEffect(() => {
@@ -110,6 +118,13 @@ export default function ChatScreen() {
       setSignedIn(has);
       setChecking(false);
       if (has) {
+        // اقرأ صلاحية الأدمن لإعفائه من قيد منع التصوير.
+        try {
+          const uid = data.session.user.id;
+          const { data: prof } = await supabase
+            .from('profiles').select('is_admin').eq('id', uid).single();
+          if (active && prof?.is_admin === true) setIsAdmin(true);
+        } catch (_) { /* تجاهل */ }
         try {
           const saved = await AsyncStorage.getItem(convKey(assistantId));
           if (active && saved) {
