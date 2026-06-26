@@ -1,22 +1,16 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLang } from '../../theme/LanguageContext';
 
 // تخطيط التبويبات الأربعة فقط. منطق الجذر (الخطوط، الـProviders، القفل،
-// فرض RTL) يعيش في app/_layout.js ولا يُكرّر هنا.
+// ضبط الاتجاه) يعيش في app/_layout.js ولا يُكرّر هنا.
 export default function TabsLayout() {
   const { colors } = useTheme();
   const { t } = useLang();
-
-  const tab = (name, labelKey, icon) => ({
-    name,
-    options: {
-      title: t(labelKey),
-      tabBarIcon: ({ color, size }) => <Ionicons name={icon} size={size} color={color} />,
-    },
-  });
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -28,8 +22,9 @@ export default function TabsLayout() {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 62,
-          paddingBottom: 8,
+          // نرفع الشريط فوق أزرار التنقّل في أندرويد بإضافة insets.bottom.
+          height: 62 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
           paddingTop: 6,
         },
         tabBarLabelStyle: {
