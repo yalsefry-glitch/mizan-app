@@ -33,7 +33,17 @@
       "expo-localization",
       "expo-font",
       "expo-splash-screen",
-      "./app-plugin-apkname.js"
+      "./app-plugin-apkname.js",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "يستخدم ميزان الميكروفون لتحويل صوتك إلى نصّ عند إدخال سؤالك صوتيّاً.",
+          "speechRecognitionPermission": "يستخدم ميزان التعرّف على الكلام لتحويل صوتك إلى نصّ داخل المحادثة.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ]
     ],
     "extra": {
       "router": {},
