@@ -1,7 +1,8 @@
 // supabase/functions/explain-lesson/index.ts
-// تستقبل نصّ الدرس، تتّصل بنموذج ذكاء (OpenAI-compatible)، وتُرجع:
+// تستقبل نصّ الدرس، تتّصل بنموذج Claude (Anthropic)، وتُرجع:
 // { explanation, keywords, question, options[4], correctIndex } بصيغة JSON.
-// بيئة: Supabase Edge Functions (Deno). جاهز للـDeploy.
+// بيئة: Supabase Edge Functions (Deno). يقرأ المفتاح من OPENAI_KEY
+// (اسم السرّ الحالي، وقيمته مفتاح Anthropic sk-ant-).
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,9 +10,8 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// نقطة نهاية النموذج (OpenAI-compatible). غيّر URL/الموديل حسب مزوّدك.
-const AI_BASE_URL = Deno.env.get('AI_BASE_URL') || 'https://api.openai.com/v1';
-const AI_MODEL = Deno.env.get('AI_MODEL') || 'gpt-4o-mini';
+// نموذج Claude (سريع واقتصادي ومناسب للأطفال).
+const AI_MODEL = Deno.env.get('AI_MODEL') || 'claude-3-5-haiku-20241022';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -24,15 +24,15 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'lessonText مطلوب' }, 400);
     }
 
+    // المفتاح مخزّن في السرّ OPENAI_KEY (قيمته مفتاح Anthropic).
     const apiKey = Deno.env.get('OPENAI_KEY');
     if (!apiKey) {
       return json({ error: 'مفتاح الذكاء غير مضبوط في الخادم' }, 500);
     }
 
-    // تعليمات النظام: تطلب مخرجًا JSON صارمًا بلا أي نصّ إضافي.
     const systemPrompt =
-      'أنت معلّم ودود للأطفال اسمه «حكيم». مهمّتك أن تشرح الدرس بأسلوب ' +
-      'مبسّط ومرح ومناسب لطفل، ثمّ تُعدّ سؤالًا واحدًا من متعدّد. ' +
+      'أنت معلّم ودود للأطفال اسمه «حكيم». اشرح الدرس بأسلوب مبسّط ' +
+      'ومرح مناسب لطفل، ثمّ أعِدّ سؤالًا واحدًا من متعدّد. ' +
       'أعِد ردّك حصريًّا بصيغة JSON صالحة دون أي نصّ قبله أو بعده، ' +
       'بالحقول التالية فقط: ' +
       '{"explanation": "شرح مبسّط مرح للطفل في ٣-٥ جمل", ' +
@@ -46,42 +46,42 @@ Deno.serve(async (req: Request) => {
     const userPrompt =
       'عنوان الدرس: ' + (title || '') + '\n\nنصّ الدرس:\n' + String(lessonText).slice(0, 6000);
 
-    // استدعاء النموذج.
-    const aiRes = await fetch(`${AI_BASE_URL}/chat/completions`, {
+    // استدعاء Anthropic Messages API.
+    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: AI_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature: 0.7,
-        response_format: { type: 'json_object' },
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
       }),
     });
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
-      return json({ error: 'فشل اتّصال الذكاء: ' + errText }, 502);
+      return json({ error: 'فشل اتّصال الذكاء', detail: errText }, 502);
     }
 
     const aiData = await aiRes.json();
-    const raw = aiData?.choices?.[0]?.message?.content || '{}';
+    // ردّ Anthropic: content مصفوفة، النصّ في content[0].text.
+    const raw =
+      Array.isArray(aiData?.content) && aiData.content[0]?.text
+        ? aiData.content[0].text
+        : '{}';
 
-    // تحليل JSON بأمان (إزالة أي أسوار ```json احتياطًا).
     let parsed: any;
     try {
       const clean = String(raw).replace(/```json|```/g, '').trim();
       parsed = JSON.parse(clean);
     } catch {
-      return json({ error: 'ردّ الذكاء ليس JSON صالحًا' }, 502);
+      return json({ error: 'ردّ الذكاء ليس JSON صالحًا', raw }, 502);
     }
 
-    // التحقّق من اكتمال الحقول وضبط القيم الافتراضية.
     const result = {
       explanation: typeof parsed.explanation === 'string' ? parsed.explanation : '',
       keywords: typeof parsed.keywords === 'string' ? parsed.keywords : (title || ''),
@@ -96,7 +96,7 @@ Deno.serve(async (req: Request) => {
     };
 
     return json(result);
-  } catch (err) {
+  } catch (err: any) {
     return json({ error: String(err?.message || err) }, 500);
   }
 });
