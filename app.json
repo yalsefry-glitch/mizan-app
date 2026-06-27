@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "عالم حكيم",
+    "slug": "alam-hakeem",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "alamhakeem",
+    "platforms": [
+      "android",
+      "ios"
+    ],
+    "android": {
+      "package": "sa.mizan.app",
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#F57C00"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "sa.mizan.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "يستخدم التطبيق الميكروفون لتحويل صوتك إلى نصّ."
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-localization",
+      "expo-font",
+      "expo-splash-screen",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "يستخدم التطبيق الميكروفون لتحويل صوتك إلى نصّ.",
+          "speechRecognitionPermission": "يستخدم التطبيق التعرّف على الكلام لتحويل صوتك إلى نصّ.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "64d231cd-9597-48ac-bdba-b2d7c60466e5"
+      },
+      "supportsRTL": true,
+      "forcesRTL": true
+    },
+    "icon": "./assets/icon.png",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/64d231cd-9597-48ac-bdba-b2d7c60466e5"
+    }
+  }
+}
