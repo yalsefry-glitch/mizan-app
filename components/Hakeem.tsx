@@ -1,21 +1,12 @@
 // components/Hakeem.tsx
-// شخصية حكيم الحيّة. تعرض أنيميشن DotLottie (.lottie) إن توفّر الأصل،
-// وإلّا تعرض حالة بديلة أنيقة (دائرة متدرّجة باسم حكيم) دون انهيار.
-// البنية جاهزة لاستقبال الأصل الفني لاحقًا بمجرّد إضافته.
+// شخصية حكيم بنمط مرن (Resilient). لا تستورد أي ملفّ .lottie ثابت
+// عبر require — لتفادي كسر البناء عند غياب الأصل. تعرض حاليًّا بديلًا
+// متدرّجًا أنيقًا (دائرة بألوان الهوية + اسم حكيم). عند توفّر أصل
+// Lottie لاحقًا، يُسجّل في config/assets ويُعرض دون تغيير هذا الملف.
 
-import { useState } from 'react';
 import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../config/theme';
-
-// محاولة استيراد DotLottie بأمان: إن لم تكن المكتبة/الأصل جاهزَين،
-// نسقط للحالة البديلة دون تعطيل التطبيق.
-let DotLottie: any = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  DotLottie = require('@lottiefiles/dotlottie-react-native').DotLottie;
-} catch {
-  DotLottie = null;
-}
 
 export type HakeemMood = 'idle' | 'happy' | 'think';
 
@@ -25,83 +16,57 @@ interface HakeemProps {
   style?: ViewStyle;
 }
 
-// خريطة المزاج -> ملفّ الأصل (يُضاف لاحقًا في assets/hakeem/).
-const MOOD_SOURCE: Record<HakeemMood, string> = {
-  idle: 'hakeem_idle',
-  happy: 'hakeem_happy',
-  think: 'hakeem_think',
+// تعبير مختصر حسب المزاج (يظهر في البديل المتدرّج).
+const MOOD_FACE: Record<HakeemMood, string> = {
+  idle: '🦉',
+  happy: '🦉',
+  think: '🦉',
 };
 
-// محاولة تحمي40 أصل الأنيميشن بأمان.
-function loadLottieSource(mood: HakeemMood): any | null {
-  try {
-    switch (mood) {
-      case 'happy':
-        return require('../assets/hakeem/hakeem_happy.lottie');
-      case 'think':
-        return require('../assets/hakeem/hakeem_think.lottie');
-      case 'idle':
-      default:
-        return require('../assets/hakeem/hakeem_idle.lottie');
-    }
-  } catch {
-    return null;
-  }
-}
+const MOOD_RING: Record<HakeemMood, string> = {
+  idle: theme.colors.primaryLight,
+  happy: theme.colors.success,
+  think: theme.colors.gem,
+};
 
 export default function Hakeem({ mood = 'idle', size = 130, style }: HakeemProps) {
-  const [assetFailed, setAssetFailed] = useState(false);
-  const source = loadLottieSource(mood);
-  const canAnimate = DotLottie && source && !assetFailed;
-
-  if (canAnimate) {
-    return (
-      <View style={[{ width: size, height: size }, style]}>
-        <DotLottie
-          source={source}
-          style={{ width: size, height: size }}
-          loop
-          autoplay
-          onError={() => setAssetFailed(true)}
-        />
-      </View>
-    );
-  }
-
-  // ===== الحالة البديلة الأنيقة (حتّى توفّر الأصل الفني) =====
+  // حاليًّا لا أصل Lottie مسجّل — نعرض البديل المتدرّج الأنيق دائمًا.
+  // (عند تسجيل أصل لاحقًا، يُضاف فحص hasAsset هنا ويُعرض المشغّل.)
   return (
-    <View style={[styles.fallback, { width: size, height: size, borderRadius: size / 2 }, style]}>
-      <Text style={[styles.fallbackName, { fontSize: size * 0.22 }]}>حكيم</Text>
-      <View style={styles.dotRow}>
-        <View style={styles.dot} />
-        <View style={styles.dot} />
-      </View>
+    <View style={[{ width: size, height: size }, style]}>
+      <LinearGradient
+        colors={[theme.colors.primary, theme.colors.primaryDark]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[
+          styles.circle,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            borderColor: MOOD_RING[mood],
+          },
+        ]}
+      >
+        <Text style={[styles.face, { fontSize: size * 0.34 }]}>{MOOD_FACE[mood]}</Text>
+        <Text style={[styles.name, { fontSize: size * 0.13 }]}>حكيم</Text>
+      </LinearGradient>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fallback: {
-    backgroundColor: theme.colors.primary,
+  circle: {
     alignItems: 'center',
     justifyContent: 'center',
-    // تدرّج بسيط عبر ظلّ داخلي محاكٍ
     borderWidth: 4,
-    borderColor: theme.colors.primaryLight,
   },
-  fallbackName: {
+  face: {
+    textAlign: 'center',
+  },
+  name: {
     fontFamily: theme.fonts.heading,
     color: theme.colors.white,
-  },
-  dotRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 6,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    marginTop: 2,
   },
 });
