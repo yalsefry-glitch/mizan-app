@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'lessonText مطلوب' }, 400);
     }
 
-    const apiKey = Deno.env.get('AI_API_KEY');
+    const apiKey = Deno.env.get('OPENAI_KEY');
     if (!apiKey) {
       return json({ error: 'مفتاح الذكاء غير مضبوط في الخادم' }, 500);
     }
