@@ -5,7 +5,7 @@
 // - يقرّر مسار الشرح التالي: يتقدّم إن فهم، أو يعيد بزاوية جديدة إن تردّد.
 // - يُرجع: ردّ حكيم (نصّ للنطق) + حالة الفهم + هل اكتمل الدرس.
 //
-// المفتاح في السرّ GEMINI_API_KEY. النموذج gemini-2.0-flash.
+// المفتاح في السرّ GEMINI_API_KEY. النموذج gemini-2.0-flash-001.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,7 +13,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const AI_MODEL = Deno.env.get('AI_MODEL') || 'gemini-2.0-flash';
+const AI_MODEL = Deno.env.get('AI_MODEL') || 'gemini-2.0-flash-001';
 
 interface Turn {
   role: 'hakeem' | 'child';

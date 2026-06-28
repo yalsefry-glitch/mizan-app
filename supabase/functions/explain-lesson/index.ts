@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 // نموذج Gemini (سريع واقتصادي ومناسب للأطفال).
-const AI_MODEL = Deno.env.get('AI_MODEL') || 'gemini-2.0-flash';
+const AI_MODEL = Deno.env.get('AI_MODEL') || 'gemini-2.0-flash-001';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
