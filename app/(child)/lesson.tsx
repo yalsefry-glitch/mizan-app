@@ -43,6 +43,7 @@ export default function LessonScreen() {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [messages, setMessages] = useState<HakeemTurn[]>([]);
   const [chips, setChips] = useState<string[]>([]);
+  const [videoId, setVideoId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -130,6 +131,10 @@ export default function LessonScreen() {
 
   // ===== إيقاف الصوت والتعرّف عند مغادرة الشاشة =====
   useEffect(() => {
+  useEffect(() => {
+    if (!lesson?.title) return;
+    supabase.functions.invoke("youtube-search", { body: { query: lesson.title } }).then(({ data }) => { if (data?.videoId) setVideoId(data.videoId); });
+  }, [lesson?.title]);
     return () => {
       try {
         Speech.stop();
@@ -333,6 +338,7 @@ export default function LessonScreen() {
           </View>
         )}
       </ScrollView>
+      {videoId && <YoutubeIframe videoId={videoId} height={200} width={undefined} />}
 
       {/* اكتمال الدرس: احتفال + دعوة للّعب */}
       {complete ? (
@@ -540,3 +546,4 @@ const s = StyleSheet.create({
   },
   rewardBtnText: { fontFamily: theme.fonts.headingMed, fontSize: 16, color: theme.colors.white },
 });
+import YoutubeIframe from 'react-native-youtube-iframe';
