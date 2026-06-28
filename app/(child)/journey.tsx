@@ -30,7 +30,7 @@ interface StationData {
 
 export default function JourneyScreen() {
   const router = useRouter();
-  const { childId } = useLocalSearchParams<{ childId: string }>();
+  const { childId, subject } = useLocalSearchParams<{ childId: string; subject: string }>();
   const [stations, setStations] = useState<StationData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -81,7 +81,7 @@ export default function JourneyScreen() {
     if (st.state === 'locked') return;
     router.push({
       pathname: '/(child)/lesson',
-      params: { childId, lessonId: st.lesson.id },
+      params: { childId, lessonId: st.lesson.id, subject: subject ?? 'math' },
     });
   };
 

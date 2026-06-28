@@ -18,6 +18,12 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  type AudioPlayer,
+  type AudioStatus,
+} from 'expo-audio';
 // حزمة اختيارية: قد لا تعمل على كل جهاز — كل استدعاء محاط بـ try/catch صامت.
 import {
   ExpoSpeechRecognitionModule,
@@ -44,6 +50,26 @@ const SUBJECT_COLORS: Record<string, string> = {
   calligraphy: '#0EA5E9',
   creative: '#EC4899',
 };
+
+// تحويل Blob (صوت MP3 راجع من دالة tts) إلى رابط بيانات صالح لمشغّل expo-audio.
+function blobToAudioUri(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error('فشل قراءة الصوت'));
+        return;
+      }
+      // result يأتي بصيغة data:application/octet-stream;base64,XXXX
+      // نثبّت نوع MP3 صراحةً ليتعرّف عليه المشغّل.
+      const base64 = result.includes(',') ? result.slice(result.indexOf(',') + 1) : result;
+      resolve(`data:audio/mpeg;base64,${base64}`);
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('فشل قراءة الصوت'));
+    reader.readAsDataURL(blob);
+  });
+}
 
 // ===== مؤشّر الاستماع: أمواج صوتية متحرّكة (equalizer) =====
 function ListeningWave({ color }: { color: string }) {
@@ -92,6 +118,8 @@ export default function LessonScreen() {
   const [listening, setListening] = useState(false);
   const [complete, setComplete] = useState(false);
   const [fontScale, setFontScale] = useState(1.18);
+  // جنس صوت حكيم (male افتراضيًّا). يُرسَل لدالة tts لاختيار الصوت.
+  const [voiceGender, setVoiceGender] = useState<'male' | 'female'>('male');
 
   // سياق الدرس وعمر الطفل (يُملأ بعد الجلب، يُستخدم في كل جولة).
   const ctx = useRef({ subject: 'math', title: '', content: '', tone: '', gradeOrder: 1, name: 'صديقي' });
@@ -102,6 +130,8 @@ export default function LessonScreen() {
   // مرجع ثابت لأحدث نسخة من send (تستدعيه أحداث التعرّف الصوتي).
   const sendRef = useRef<(t: string) => void>(() => {});
   const scrollRef = useRef<ScrollView>(null);
+  // مشغّل صوت ElevenLabs الحالي (نوقفه عند كل نطق جديد ومغادرة الشاشة).
+  const playerRef = useRef<AudioPlayer | null>(null);
 
   const haloColor = SUBJECT_COLORS[subject || 'math'] || SUBJECT_COLORS.math;
 
@@ -150,10 +180,9 @@ export default function LessonScreen() {
     setListening(false);
   }, []);
 
-  // ===== النطق الصوتي (TTS) ثمّ الاستماع التلقائي =====
-  const speak = useCallback(
+  // ===== الاحتياط: نطق الجهاز المدمج (expo-speech) عند تعذّر صوت ElevenLabs =====
+  const speakWithDevice = useCallback(
     (text: string, autoListen: boolean) => {
-      if (!text) return;
       try {
         Speech.stop();
         Speech.speak(text, {
@@ -174,14 +203,83 @@ export default function LessonScreen() {
     [startListening]
   );
 
+  // ===== إيقاف أي صوت جارٍ: مشغّل ElevenLabs + نطق الجهاز =====
   const stopSpeaking = useCallback(() => {
     try {
       Speech.stop();
     } catch {
       // نتجاهل بصمت.
     }
+    if (playerRef.current) {
+      try {
+        playerRef.current.remove();
+      } catch {
+        // نتجاهل بصمت.
+      }
+      playerRef.current = null;
+    }
     setSpeaking(false);
   }, []);
+
+  // ===== النطق الصوتي: صوت ElevenLabs الفاخر عبر دالة tts، مع احتياط للجهاز =====
+  const speak = useCallback(
+    async (text: string, autoListen: boolean) => {
+      if (!text) return;
+
+      // أوقف أي صوت سابق (مشغّل أو نطق جهاز) قبل البدء.
+      try {
+        Speech.stop();
+      } catch {
+        // نتجاهل بصمت.
+      }
+      if (playerRef.current) {
+        try {
+          playerRef.current.remove();
+        } catch {
+          // نتجاهل بصمت.
+        }
+        playerRef.current = null;
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke('tts', {
+          body: { text, gender: voiceGender },
+        });
+        // الدالة تُرجع صوتًا ثنائيًّا (Blob). أي شيء آخر (خطأ/نصّ) → الاحتياط.
+        if (error || !(data instanceof Blob)) throw error ?? new Error('لا يوجد صوت');
+
+        const uri = await blobToAudioUri(data);
+        try {
+          await setAudioModeAsync({ playsInSilentMode: true });
+        } catch {
+          // وضع الصوت ليس حرجًا — نكمل.
+        }
+
+        const player = createAudioPlayer({ uri });
+        playerRef.current = player;
+        setSpeaking(true);
+        player.addListener('playbackStatusUpdate', (status: AudioStatus) => {
+          if (status.didJustFinish) {
+            setSpeaking(false);
+            if (playerRef.current === player) {
+              try {
+                player.remove();
+              } catch {
+                // نتجاهل بصمت.
+              }
+              playerRef.current = null;
+            }
+            if (autoListen) startListening();
+          }
+        });
+        player.play();
+      } catch {
+        // أي فشل (شبكة، مفتاح، صيغة، عدم نشر tts) → نعود لنطق الجهاز صامتًا.
+        speakWithDevice(text, autoListen);
+      }
+    },
+    [voiceGender, startListening, speakWithDevice]
+  );
 
   // ===== إرسال ردّ الطفل (صوتًا أو بطاقة) =====
   const send = useCallback(
@@ -288,6 +386,14 @@ export default function LessonScreen() {
         Speech.stop();
       } catch {
         // نتجاهل بصمت.
+      }
+      if (playerRef.current) {
+        try {
+          playerRef.current.remove();
+        } catch {
+          // نتجاهل بصمت.
+        }
+        playerRef.current = null;
       }
       try {
         ExpoSpeechRecognitionModule.abort();
@@ -417,6 +523,14 @@ export default function LessonScreen() {
           <Text style={s.backIcon}>↩</Text>
         </TouchableOpacity>
         <Text style={s.headerName}>حكيم</Text>
+        {/* زرّ تبديل جنس الصوت (ذكر/أنثى) — يُطبَّق على النطق التالي */}
+        <TouchableOpacity
+          onPress={() => setVoiceGender((g) => (g === 'male' ? 'female' : 'male'))}
+          style={s.genderBtn}
+          accessibilityLabel={voiceGender === 'male' ? 'صوت ذكوري' : 'صوت أنثوي'}
+        >
+          <Text style={s.genderIcon}>{voiceGender === 'male' ? '👦' : '👧'}</Text>
+        </TouchableOpacity>
         {speaking ? (
           <TouchableOpacity onPress={stopSpeaking} style={s.muteBtn}>
             <Text style={s.muteIcon}>🔇</Text>
@@ -544,6 +658,15 @@ const s = StyleSheet.create({
   headerName: { flex: 1, fontFamily: theme.fonts.heading, fontSize: 19, color: theme.colors.textDark, textAlign: 'center' },
   muteBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   muteIcon: { fontSize: 20 },
+  genderBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: theme.colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  genderIcon: { fontSize: 20 },
 
   // الجسم
   body: { alignItems: 'center', paddingHorizontal: theme.spacing.md, paddingTop: 18, gap: 18 },

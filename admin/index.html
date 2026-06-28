@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>عالم حكيم — لوحة المالك</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0e1117;
+      --surface: #161b22;
+      --surface-2: #1c2230;
+      --border: #2a3140;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --primary: #ff9f1c;
+      --primary-dark: #e8890b;
+      --green: #10b981;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --pink: #ec4899;
+      --cyan: #0ea5e9;
+      --radius: 16px;
+      --shadow: 0 8px 30px rgba(0,0,0,0.35);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    /* ===== شاشة الدخول ===== */
+    #login {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(1200px 600px at 70% -10%, rgba(255,159,28,0.12), transparent), var(--bg);
+      z-index: 50;
+    }
+    .login-card {
+      width: min(92vw, 380px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 28px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .login-card .owl { font-size: 52px; }
+    .login-card h1 { font-size: 22px; margin: 10px 0 4px; }
+    .login-card p { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+    input, textarea, select {
+      font-family: 'Cairo', sans-serif;
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 13px 14px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--primary); }
+    .btn {
+      font-family: 'Cairo', sans-serif;
+      cursor: pointer;
+      border: none;
+      border-radius: 12px;
+      padding: 13px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      background: var(--primary);
+      color: #1a1206;
+      transition: transform .08s, background .15s;
+    }
+    .btn:hover { background: var(--primary-dark); }
+    .btn:active { transform: scale(.98); }
+    .btn-ghost { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    .login-err { color: #f87171; font-size: 13px; min-height: 18px; margin-top: 10px; }
+
+    /* ===== الهيكل ===== */
+    #app { display: none; }
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 22px;
+      background: rgba(22,27,34,0.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 18px; }
+    .brand .owl { font-size: 24px; }
+    .topbar .live { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(16,185,129,.6); animation: pulse 1.8s infinite; }
+    @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(16,185,129,.5)} 70%{box-shadow:0 0 0 8px rgba(16,185,129,0)} 100%{box-shadow:0 0 0 0 rgba(16,185,129,0)} }
+
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 22px; }
+    .section-title { font-size: 16px; font-weight: 700; margin: 26px 4px 14px; display: flex; align-items: center; gap: 8px; }
+
+    /* بطاقات الإحصاء */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat::after { content:''; position:absolute; inset-inline-start:0; top:0; bottom:0; width:4px; background: var(--accent, var(--primary)); }
+    .stat .label { color: var(--muted); font-size: 13px; }
+    .stat .value { font-size: 28px; font-weight: 900; margin-top: 6px; }
+    .stat .delta { font-size: 12px; margin-top: 4px; }
+    .delta.up { color: var(--green); }
+    .delta.down { color: #f87171; }
+
+    /* لوحات الرسوم */
+    .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+    .grid-2b { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .panel h3 { font-size: 14px; margin-bottom: 14px; color: var(--text); font-weight: 700; }
+    .panel .canvas-box { position: relative; height: 260px; }
+
+    /* أدوات التحكّم */
+    .control-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+    .control-row .field { flex: 1; min-width: 160px; }
+    .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .price-display { font-size: 22px; font-weight: 900; color: var(--primary); }
+
+    /* رفع المناهج */
+    .hakeem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .hakeem-up {
+      background: var(--surface-2);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+    .hakeem-up .h-name { font-weight: 700; margin: 6px 0; }
+    .hakeem-up .h-status { font-size: 11px; color: var(--muted); min-height: 15px; }
+    .hakeem-up .chip { display: inline-block; font-size: 18px; width: 40px; height: 40px; line-height: 40px; border-radius: 50%; color: #1a1206; }
+    .file-label { display:block; margin-top:8px; cursor:pointer; font-size:12px; color: var(--primary); }
+    .file-label input { display:none; }
+
+    /* جدول المحتوى */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: right; padding: 11px 10px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; }
+    .badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 700; }
+    .badge.ok { background: rgba(16,185,129,.15); color: var(--green); }
+    .badge.wait { background: rgba(255,159,28,.15); color: var(--primary); }
+
+    /* إشعار جماعي */
+    textarea { resize: vertical; min-height: 90px; }
+
+    /* توست */
+    #toast {
+      position: fixed; bottom: 24px; inset-inline-start: 50%; transform: translateX(50%) translateY(120px);
+      background: var(--green); color: #04130d; padding: 12px 22px; border-radius: 12px;
+      font-weight: 700; box-shadow: var(--shadow); transition: transform .3s; z-index: 60;
+    }
+    #toast.show { transform: translateX(50%) translateY(0); }
+
+    @media (max-width: 860px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .grid-2, .grid-2b { grid-template-columns: 1fr; }
+      .hakeem-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <!-- ===== شاشة الدخول ===== -->
+  <div id="login">
+    <div class="login-card">
+      <div class="owl">🦉</div>
+      <h1>لوحة المالك</h1>
+      <p>عالم حكيم — دخول خاصّ بالإدارة</p>
+      <input id="pw" type="password" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')doLogin()" />
+      <div class="login-err" id="loginErr"></div>
+      <button class="btn" style="width:100%;margin-top:6px" onclick="doLogin()">دخول</button>
+    </div>
+  </div>
+
+  <!-- ===== التطبيق ===== -->
+  <div id="app">
+    <div class="topbar">
+      <div class="brand"><span class="owl">🦉</span><span>عالم حكيم</span></div>
+      <div class="live"><span class="dot"></span> بيانات حيّة · آخر تحديث الآن</div>
+      <button class="btn btn-ghost" onclick="logout()">خروج</button>
+    </div>
+
+    <div class="wrap">
+      <!-- الإحصائيات -->
+      <div class="section-title">📊 نظرة عامة</div>
+      <div class="stats">
+        <div class="stat" style="--accent:var(--primary)">
+          <div class="label">المستخدمون النشطون</div>
+          <div class="value" id="s-users">3,184</div>
+          <div class="delta up">▲ 12.4% هذا الأسبوع</div>
+        </div>
+        <div class="stat" style="--accent:var(--green)">
+          <div class="label">الإيرادات الشهرية</div>
+          <div class="value" id="s-rev">48,920 ﷼</div>
+          <div class="delta up">▲ 8.1% عن الشهر السابق</div>
+        </div>
+        <div class="stat" style="--accent:var(--blue)">
+          <div class="label">نسبة التجديد</div>
+          <div class="value" id="s-renew">73%</div>
+          <div class="delta up">▲ 3.2%</div>
+        </div>
+        <div class="stat" style="--accent:var(--purple)">
+          <div class="label">تقييم المتجر</div>
+          <div class="value" id="s-rating">4.8 ★</div>
+          <div class="delta up">▲ 0.2 (1,240 تقييم)</div>
+        </div>
+      </div>
+
+      <!-- الرسوم -->
+      <div class="section-title">📈 التحليلات</div>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>نمو المستخدمين أسبوعيًّا</h3>
+          <div class="canvas-box"><canvas id="growthChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3>توزيع الاستخدام على الحكماء الستة</h3>
+          <div class="canvas-box"><canvas id="usageChart"></canvas></div>
+        </div>
+      </div>
+      <div class="grid-2b" style="margin-top:16px">
+        <div class="panel">
+          <h3>الإيرادات شهريًّا (﷼)</h3>
+          <div class="canvas-box"><canvas id="revenueChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3>متوسّط دقائق التعلّم اليومية</h3>
+          <div class="canvas-box"><canvas id="minutesChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- التحكّم في السعر -->
+      <div class="section-title">💳 الاشتراك</div>
+      <div class="panel">
+        <div class="control-row">
+          <div class="field">
+            <label>السعر الحالي للاشتراك الشهري (﷼)</label>
+            <input id="priceInput" type="number" min="0" step="1" value="29" />
+          </div>
+          <div class="field">
+            <label>السعر المعروض للمستخدمين</label>
+            <div class="price-display"><span id="priceShown">29</span> ﷼ / شهريًّا</div>
+          </div>
+          <button class="btn" onclick="savePrice()">حفظ السعر</button>
+        </div>
+      </div>
+
+      <!-- رفع المناهج -->
+      <div class="section-title">📚 رفع منهج كل حكيم (PDF)</div>
+      <div class="panel">
+        <div class="hakeem-grid" id="hakeemGrid"></div>
+      </div>
+
+      <!-- إدارة المحتوى -->
+      <div class="section-title">🗂️ إدارة المحتوى</div>
+      <div class="panel">
+        <table>
+          <thead>
+            <tr><th>الدرس</th><th>الحكيم</th><th>الصفّ</th><th>الحالة</th><th>إجراء</th></tr>
+          </thead>
+          <tbody id="contentBody"></tbody>
+        </table>
+      </div>
+
+      <!-- إشعار جماعي -->
+      <div class="section-title">📢 إشعار جماعي لكل العائلات</div>
+      <div class="panel">
+        <textarea id="broadcastMsg" placeholder="اكتب رسالتك هنا... (مثال: مفاجأة! درس جديد في حكيم العلوم بانتظار أبطالكم 🎉)"></textarea>
+        <div class="control-row" style="margin-top:12px; justify-content:flex-start">
+          <select id="broadcastTarget" style="max-width:220px">
+            <option value="all">كل العائلات</option>
+            <option value="active">النشطون فقط</option>
+            <option value="lapsed">المنقطعون عن التعلّم</option>
+          </select>
+          <button class="btn" onclick="sendBroadcast()">إرسال الإشعار</button>
+        </div>
+      </div>
+
+      <div style="height:40px"></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // ===== كلمة المرور (تجريبية — تُربط لاحقًا بمصادقة الخادم) =====
+    const ADMIN_PASSWORD = 'hakeem2026';
+
+    function doLogin() {
+      const pw = document.getElementById('pw').value;
+      const err = document.getElementById('loginErr');
+      if (pw === ADMIN_PASSWORD) {
+        sessionStorage.setItem('hk_admin', '1');
+        showApp();
+      } else {
+        err.textContent = 'كلمة المرور غير صحيحة';
+      }
+    }
+    function logout() {
+      sessionStorage.removeItem('hk_admin');
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('login').style.display = 'flex';
+      document.getElementById('pw').value = '';
+    }
+    function showApp() {
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      if (!window._charted) { buildCharts(); buildHakeems(); buildContent(); window._charted = true; }
+    }
+
+    // ===== توست =====
+    let toastTimer;
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+    }
+
+    // ===== التحكّم في السعر =====
+    document.getElementById('priceInput')?.addEventListener('input', (e) => {
+      document.getElementById('priceShown').textContent = e.target.value || '0';
+    });
+    function savePrice() {
+      const v = document.getElementById('priceInput').value || '0';
+      document.getElementById('priceShown').textContent = v;
+      toast('تم حفظ السعر: ' + v + ' ﷼ شهريًّا');
+    }
+
+    // ===== الحكماء الستة =====
+    const HAKEEMS = [
+      { key:'math', name:'الرياضيات', emoji:'🔢', color:'#ff9f1c' },
+      { key:'science', name:'العلوم', emoji:'🔬', color:'#10b981' },
+      { key:'english', name:'الإنجليزية', emoji:'🔤', color:'#3b82f6' },
+      { key:'arabic', name:'العربية', emoji:'📖', color:'#8b5cf6' },
+      { key:'calligraphy', name:'الخط', emoji:'🖌️', color:'#0ea5e9' },
+      { key:'creative', name:'الإبداع', emoji:'🎨', color:'#ec4899' },
+    ];
+
+    function buildHakeems() {
+      const grid = document.getElementById('hakeemGrid');
+      grid.innerHTML = HAKEEMS.map((h, i) => `
+        <div class="hakeem-up">
+          <span class="chip" style="background:${h.color}">${h.emoji}</span>
+          <div class="h-name">حكيم ${h.name}</div>
+          <div class="h-status" id="hstat-${i}">لا ملف مرفوع بعد</div>
+          <label class="file-label">رفع PDF
+            <input type="file" accept="application/pdf" onchange="onPdf(${i}, this)" />
+          </label>
+        </div>
+      `).join('');
+    }
+    function onPdf(i, input) {
+      const f = input.files && input.files[0];
+      if (!f) return;
+      document.getElementById('hstat-' + i).textContent = '✅ ' + f.name + ' (' + Math.round(f.size/1024) + ' ك.ب)';
+      toast('تم استلام منهج حكيم ' + HAKEEMS[i].name);
+    }
+
+    // ===== إدارة المحتوى (عيّنة) =====
+    const CONTENT = [
+      { t:'مقدمة في الضرب', h:'الرياضيات', g:'الثاني', s:'ok' },
+      { t:'دورة الماء في الطبيعة', h:'العلوم', g:'الثالث', s:'ok' },
+      { t:'الحروف الإنجليزية A–F', h:'الإنجليزية', g:'الأول', s:'wait' },
+      { t:'حرف الباء وأشكاله', h:'الخط', g:'الأول', s:'ok' },
+      { t:'قصة وأرسم بطلها', h:'الإبداع', g:'الثاني', s:'wait' },
+    ];
+    function buildContent() {
+      document.getElementById('contentBody').innerHTML = CONTENT.map((c, i) => `
+        <tr>
+          <td>${c.t}</td>
+          <td>${c.h}</td>
+          <td>${c.g}</td>
+          <td><span class="badge ${c.s==='ok'?'ok':'wait'}">${c.s==='ok'?'منشور':'قيد المعالجة'}</span></td>
+          <td><button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="toast('فتح محرّر: ${c.t}')">تحرير</button></td>
+        </tr>
+      `).join('');
+    }
+
+    // ===== الإشعار الجماعي =====
+    function sendBroadcast() {
+      const msg = document.getElementById('broadcastMsg').value.trim();
+      const target = document.getElementById('broadcastTarget');
+      if (!msg) { toast('اكتب نصّ الإشعار أولًا'); return; }
+      const label = target.options[target.selectedIndex].text;
+      document.getElementById('broadcastMsg').value = '';
+      toast('أُرسل الإشعار إلى: ' + label);
+    }
+
+    // ===== الرسوم البيانية =====
+    function buildCharts() {
+      Chart.defaults.font.family = 'Cairo';
+      Chart.defaults.color = '#8b949e';
+      const gridColor = 'rgba(255,255,255,0.06)';
+
+      // نمو المستخدمين أسبوعيًّا
+      new Chart(document.getElementById('growthChart'), {
+        type: 'line',
+        data: {
+          labels: ['أسبوع ١','أسبوع ٢','أسبوع ٣','أسبوع ٤','أسبوع ٥','أسبوع ٦','أسبوع ٧','أسبوع ٨'],
+          datasets: [{
+            label: 'مستخدمون', data: [420, 690, 980, 1340, 1810, 2360, 2780, 3184],
+            borderColor: '#ff9f1c', backgroundColor: 'rgba(255,159,28,0.15)',
+            fill: true, tension: 0.4, borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#ff9f1c',
+          }]
+        },
+        options: chartOpts(gridColor)
+      });
+
+      // توزيع الاستخدام على الحكماء
+      new Chart(document.getElementById('usageChart'), {
+        type: 'doughnut',
+        data: {
+          labels: HAKEEMS.map(h => h.name),
+          datasets: [{ data: [28, 22, 16, 14, 11, 9], backgroundColor: HAKEEMS.map(h => h.color), borderColor: '#161b22', borderWidth: 3 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 14, font: { size: 12 } } } } }
+      });
+
+      // الإيرادات شهريًّا
+      new Chart(document.getElementById('revenueChart'), {
+        type: 'bar',
+        data: {
+          labels: ['يناير','فبراير','مارس','أبريل','مايو','يونيو'],
+          datasets: [{ label: 'إيراد', data: [18200, 24600, 31100, 38400, 44300, 48920], backgroundColor: '#10b981', borderRadius: 8 }]
+        },
+        options: chartOpts(gridColor)
+      });
+
+      // دقائق التعلّم
+      new Chart(document.getElementById('minutesChart'), {
+        type: 'line',
+        data: {
+          labels: ['سبت','أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة'],
+          datasets: [{ label: 'دقائق', data: [16, 19, 22, 21, 25, 28, 24], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.15)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 3 }]
+        },
+        options: chartOpts(gridColor)
+      });
+    }
+    function chartOpts(gridColor) {
+      return {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { font: { size: 11 } } },
+          y: { grid: { color: gridColor }, ticks: { font: { size: 11 } } }
+        }
+      };
+    }
+
+    // دخول تلقائي إن كانت الجلسة قائمة
+    if (sessionStorage.getItem('hk_admin') === '1') showApp();
+  </script>
+</body>
+</html>

@@ -6,13 +6,23 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "alamhakeem",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF0E6"
+    },
     "platforms": [
       "android",
       "ios"
     ],
     "android": {
       "package": "sa.mizan.app",
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFF0E6"
+      }
     },
     "ios": {
       "bundleIdentifier": "sa.mizan.app"
@@ -22,7 +32,9 @@
       "expo-status-bar",
       "expo-localization",
       "expo-font",
-      "expo-speech-recognition"
+      "expo-speech-recognition",
+      "expo-audio",
+      "expo-local-authentication"
     ],
     "extra": {
       "router": {},

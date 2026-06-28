@@ -71,7 +71,9 @@ Deno.serve(async (req: Request) => {
       status: 200,
       headers: {
         ...corsHeaders,
-        'Content-Type': 'audio/mpeg',
+        // octet-stream حتى يُرجِع supabase.functions.invoke الصوت كـ Blob ثنائي
+        // (audio/mpeg يُفسَّر نصًّا فيتلف الصوت). البايتات نفسها صوت MP3.
+        'Content-Type': 'application/octet-stream',
         'Cache-Control': 'no-store',
       },
     });

@@ -2,7 +2,7 @@
 // شاشة دخول/تسجيل وليّ الأمر. تبديل بين وضعين (دخول / حساب جديد).
 // عند النجاح: توجيه لاختيار الطفل (دخول) أو إعداد الأطفال (تسجيل جديد).
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { signInParent, signUpParent } from '../../core/auth';
+import { supabase } from '../../core/supabase';
 import { theme } from '../../config/theme';
 
 type Mode = 'signin' | 'signup';
@@ -29,6 +31,40 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+
+  // فحص توفّر البصمة على الجهاز (عتاد + بصمة مسجّلة).
+  useEffect(() => {
+    (async () => {
+      try {
+        const hasHw = await LocalAuthentication.hasHardwareAsync();
+        const enrolled = await LocalAuthentication.isEnrolledAsync();
+        setBiometricAvailable(hasHw && enrolled);
+      } catch {
+        setBiometricAvailable(false);
+      }
+    })();
+  }, []);
+
+  // الدخول بالبصمة: نجاح يدخل مباشرة (إن وُجدت جلسة)، فشل يبقى الدخول العادي.
+  const loginWithBiometrics = async () => {
+    setError(null);
+    try {
+      const res = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'أكّد هويتك للدخول',
+        cancelLabel: 'إلغاء',
+      });
+      if (!res.success) return; // إلغاء/فشل → نبقى على الدخول العادي بصمت.
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        router.replace('/profiles');
+      } else {
+        setError('سجّل الدخول بالبريد مرّة أولى لتفعيل البصمة');
+      }
+    } catch {
+      // أي خطأ → نبقى على الدخول العادي بصمت.
+    }
+  };
 
   const submit = async () => {
     setError(null);
@@ -137,6 +173,13 @@ export default function LoginScreen() {
                 : 'لديك حساب؟ سجّل الدخول'}
             </Text>
           </TouchableOpacity>
+
+          {mode === 'signin' && biometricAvailable && (
+            <TouchableOpacity style={s.bioBtn} onPress={loginWithBiometrics}>
+              <Text style={s.bioIcon}>👆</Text>
+              <Text style={s.bioText}>الدخول بالبصمة</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -231,5 +274,22 @@ const s = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginTop: 16,
+  },
+  bioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 18,
+    paddingVertical: 12,
+    borderRadius: theme.radius.md,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+  },
+  bioIcon: { fontSize: 20 },
+  bioText: {
+    fontFamily: theme.fonts.bodyBold,
+    fontSize: 15,
+    color: theme.colors.textDark,
   },
 });

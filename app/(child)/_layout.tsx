@@ -41,6 +41,13 @@ export default function ChildLayout() {
       }}
     >
       <Tabs.Screen
+        name="home"
+        options={{
+          title: 'الرئيسية',
+          tabBarIcon: ({ focused }) => <TabIcon label="🦉" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="world"
         options={{
           title: 'عالمي',
