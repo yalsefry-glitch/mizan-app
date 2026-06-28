@@ -125,6 +125,7 @@
 ### منشورة وتعمل
 - `explain-lesson`: تشرH درسًا عبر Claude (نسخة Anthropic، claude-haiku-4-5). **مختبرة وتعمل**.
 - `tutor-chat`: **عقل المعلّم الحواري الجديد**. **منشورة ومختبرة فعليًّا** (نُشرت عبر لوحة Supabase في المتصفّح، ٢٠٢٦-٠٦-٢٨). تستقبل سجلّ المحادثة + ردّ الطفل، تحلّل الفهم، تقرّر مسار حكيم دون صح/خطأ، تُرجع: reply, understanding, concept, lessonComplete, suggestChips. اختُبرت بحوار حقيقي ٤ جولات: تبدأ الحوار، وعند خطأ الطفل تعيد الشرح بزاوية أبسط (understanding=needs_review) بلا أي «خطأ»، وعند الصواب تشجّع وتتقدّم (understanding=good).
+- `tts`: **النطق الصوتي لحكيم** عبر ElevenLabs. **منشورة ومختبرة فعليًّا** (٢٠٢٦-٠٦-٢٨). تستقبل `{ text, gender }` وتُرجع صوت `audio/mpeg` (MP3). النموذج `eleven_multilingual_v2` (يدعم العربية). تختار الصوت حسب الجنس: `male` (افتراضي — حكيم) أو `female`. اختُبر المساران بنصّ عربي قصير وأرجعا ملفّي MP3 صالحين (رمز ٢٠٠). **يتطلّب اشتراك ElevenLabs مدفوعًا** (الحساب المجّاني لا يستخدم أصوات المكتبة عبر الـAPI — درس: خطأ `payment_required`). الأسرار المطلوبة في Secrets: `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_MALE` (`t9akNmCDhz230CEXOYmn`) + `ELEVENLABS_VOICE_FEMALE` (`kdUY91gH5xyDHapxlthT`) — **مضبوطة فعليًّا**.
 
 ### مكتوبة غير منشورة
 - `process-file`: استخراج نصّ مناهج PDF (unpdf). تحتاج SUPABASE_URL + SERVICE_ROLE_KEY.
