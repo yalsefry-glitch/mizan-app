@@ -47,7 +47,8 @@ DROP POLICY IF EXISTS "referrals_select_own" ON public.referrals;
 CREATE POLICY "referrals_select_own" ON public.referrals
   FOR SELECT USING (referrer_id = auth.uid() OR referee_id = auth.uid());
 
-DROP POLICY IF EXISTS "referrals_insert_own" ON public.referrals
+DROP POLICY IF EXISTS "referrals_insert_own" ON public.referrals;
+CREATE POLICY "referrals_insert_own" ON public.referrals
   FOR INSERT WITH CHECK (referee_id = auth.uid());
 
 -- ===== ٣. جدول PIN المالك =====
