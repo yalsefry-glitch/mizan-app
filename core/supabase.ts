@@ -168,6 +168,22 @@ export interface LearningPath {
   updated_at: string;
 }
 
+export interface IngestionJob {
+  id: string;
+  file_path: string;
+  subject_id: string;
+  grade_id: string;
+  part_number: number;
+  status: 'pending' | 'processing' | 'done' | 'failed';
+  total_pages: number | null;
+  last_page_done: number;
+  lessons_created: number;
+  chunks_created: number;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ===== إنشاء العميل =====
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
