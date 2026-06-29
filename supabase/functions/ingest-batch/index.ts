@@ -86,15 +86,21 @@ function detectLessonsInBatch(pages: PageText[], currentChapter: { number: numbe
   const lessons: DetectedLesson[] = [];
   let chapter = { ...currentChapter };
 
-  const chapterPattern = /الفصل\s+(\d+)\s*[:：]\s*(.+)/;
-  const lessonPattern = /الدرس\s+(\d+)\s*[:：]\s*(.+)/;
+  // إزالة علامات Unicode الاتّجاهية (LRM, RLM, PDF markers)
+  const cleanText = (text: string) => text.replace(/[\u200E\u200F\u202A-\u202E]/g, '').replace(/\s+/g, ' ');
+
+  // أنماط محسّنة لكشف البنية
+  const chapterPattern = /الفصل\s*[:：]?\s*(\d+)\s*[:：]?\s*(.+)/;
+  const lessonNumPattern = /الدرس\s*[:：]?\s*(\d+)\s*[:：]?\s*(.+)/; // "الدرس : 3 العنوان"
+  const lessonCodePattern = /^(\d+)-(\d+)\s+(.+)/; // "5-1 العنوان" (فصل-درس)
   const testMidPattern = /اختبار\s+منتصف\s+الفصل/;
   const testChapterPattern = /اختبار\s+الفصل/;
   const testCumulativePattern = /الاختبار\s+التراكمي/;
-  const introPattern = /الفصل\s+[:：]\s*التهيئة/;
+  const introPattern = /الفصل\s*[:：]?\s*التهيئة/;
 
   for (const page of pages) {
-    const text = page.text;
+    const text = cleanText(page.text);
+    const textLines = text.split('\n').map(l => l.trim()).filter(l => l.length > 5);
 
     // تحديث الفصل الحالي
     const chapterMatch = text.match(chapterPattern);
@@ -108,7 +114,7 @@ function detectLessonsInBatch(pages: PageText[], currentChapter: { number: numbe
     // كشف العناوين
     if (introPattern.test(text)) {
       lessons.push({
-        title: `${chapter.title} - التهيئة`,
+        title: `${chapter.title || 'الفصل ' + chapter.number} - التهيئة`,
         lesson_type: 'intro',
         chapter_number: chapter.number,
         chapter_title: chapter.title,
@@ -150,15 +156,44 @@ function detectLessonsInBatch(pages: PageText[], currentChapter: { number: numbe
       continue;
     }
 
-    const lessonMatch = text.match(lessonPattern);
-    if (lessonMatch) {
+    // كشف الدروس: نمط "الدرس : 3 العنوان"
+    const lessonNumMatch = text.match(lessonNumPattern);
+    if (lessonNumMatch) {
       lessons.push({
-        title: lessonMatch[2].trim(),
+        title: lessonNumMatch[2].trim(),
         lesson_type: 'lesson',
         chapter_number: chapter.number,
         chapter_title: chapter.title,
         page_start: page.pageNumber,
       });
+      continue;
+    }
+
+    // كشف الدروس: نمط "5-1 العنوان" (فصل-درس)
+    for (const line of textLines) {
+      const lessonCodeMatch = line.match(lessonCodePattern);
+      if (lessonCodeMatch) {
+        const chapterNum = parseInt(lessonCodeMatch[1]);
+        const lessonNum = parseInt(lessonCodeMatch[2]);
+        const title = lessonCodeMatch[3].trim();
+
+        // تحديث الفصل الحالي إن تغيّر
+        if (chapterNum !== chapter.number) {
+          chapter = {
+            number: chapterNum,
+            title: `الفصل ${chapterNum}`,
+          };
+        }
+
+        lessons.push({
+          title: title,
+          lesson_type: 'lesson',
+          chapter_number: chapterNum,
+          chapter_title: chapter.title,
+          page_start: page.pageNumber,
+        });
+        break; // درس واحد لكل صفحة
+      }
     }
   }
 
