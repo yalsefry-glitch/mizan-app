@@ -81,39 +81,67 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // مصدر النصّ: (أ) نصّ مُمرَّر، (ب) استخراج من PDF عبر unpdf، (ج) حقل الدرس.
-    if (!text && fileUrl) {
+    // مصدر النصّ: (أ) PDF صفحة صفحة + تتبّع الصفحات، (ب) نصّ مُمرَّر (بلا أرقام)، (ج) حقل الدرس.
+    interface PagedChunk { text: string; pageNumber: number | null }
+    const pagedChunks: PagedChunk[] = [];
+
+    if (fileUrl) {
+      // استخراج PDF صفحة صفحة مع تتبّع رقم الصفحة
       const { extractText, getDocumentProxy } = await import('https://esm.sh/unpdf');
       const buf = new Uint8Array(await (await fetch(fileUrl)).arrayBuffer());
       const pdf = await getDocumentProxy(buf);
-      const r = await extractText(pdf, { mergePages: true });
-      text = Array.isArray(r.text) ? r.text.join('\n') : String(r.text || '');
-    }
-    if (!text) {
+      const totalPages = pdf.numPages;
+
+      for (let p = 1; p <= totalPages; p++) {
+        const pageResult = await extractText(pdf, { mergePages: false, pages: [p] });
+        const pageText = Array.isArray(pageResult.text)
+          ? pageResult.text.join('\n')
+          : String(pageResult.text || '');
+        if (pageText.trim()) {
+          const pageChunks = chunkText(pageText);
+          for (const chunk of pageChunks) {
+            pagedChunks.push({ text: chunk, pageNumber: p });
+          }
+        }
+      }
+    } else if (text) {
+      // نصّ مُمرَّر مباشرة — بلا أرقام صفحات
+      const simpleChunks = chunkText(text);
+      for (const chunk of simpleChunks) {
+        pagedChunks.push({ text: chunk, pageNumber: null });
+      }
+    } else {
+      // احتياط: جلب من حقل الدرس
       const { data: lesson } = await supabase
         .from('lessons')
         .select('content_text')
         .eq('id', lessonId)
         .single();
-      text = lesson?.content_text || '';
+      const lessonText = lesson?.content_text || '';
+      if (lessonText.trim()) {
+        const simpleChunks = chunkText(lessonText);
+        for (const chunk of simpleChunks) {
+          pagedChunks.push({ text: chunk, pageNumber: null });
+        }
+      }
     }
-    if (!text.trim()) return json({ error: 'لا يوجد نصّ للاستيعاب' }, 400);
 
-    const chunks = chunkText(text);
-    if (chunks.length === 0) return json({ error: 'تعذّر تقسيم النصّ' }, 400);
+    if (pagedChunks.length === 0) return json({ error: 'لا يوجد نصّ للاستيعاب' }, 400);
 
     // إعادة استيعاب نظيفة: نحذف مقاطع هذا الدرس السابقة قبل الإدراج.
     await supabase.from('lesson_chunks').delete().eq('lesson_id', lessonId);
 
     const rows: Record<string, unknown>[] = [];
-    for (let idx = 0; idx < chunks.length; idx++) {
-      const embedding = await embed(chunks[idx], geminiKey);
+    for (let idx = 0; idx < pagedChunks.length; idx++) {
+      const { text: chunkText, pageNumber } = pagedChunks[idx];
+      const embedding = await embed(chunkText, geminiKey);
       rows.push({
         lesson_id: lessonId,
         subject,
         grade_order: gradeOrder,
         chunk_index: idx,
-        content: chunks[idx],
+        content: chunkText,
+        page_number: pageNumber,
         embedding,
       });
     }

@@ -5,6 +5,7 @@
 
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../../config/theme';
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
@@ -21,6 +22,8 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
 }
 
 export default function ChildLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -30,8 +33,8 @@ export default function ChildLayout() {
         tabBarStyle: {
           backgroundColor: theme.colors.card,
           borderTopColor: theme.colors.border,
-          height: 64,
-          paddingBottom: 8,
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom + 8,
           paddingTop: 6,
         },
         tabBarLabelStyle: {
@@ -66,6 +69,13 @@ export default function ChildLayout() {
         options={{
           title: 'الآباء',
           tabBarIcon: ({ focused }) => <TabIcon label="👨‍👩‍👧" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'الإعدادات',
+          tabBarIcon: ({ focused }) => <TabIcon label="⚙️" focused={focused} />,
         }}
       />
       {/* شاشات لا تظهر في الشريط السفلي */}

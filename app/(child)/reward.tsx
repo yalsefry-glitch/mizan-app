@@ -1,317 +1,205 @@
 // app/(child)/reward.tsx
-// شاشة المكافأة: الطفل يختار واحدة من أربع ألعاب تفاعلية (Skia + Reanimated)،
-// يلعبها (٣٠-٦٠ ثانية)، فيكسب جواهر ١-٥ حسب أدائه (لا صح/خطأ). عند الانتهاء:
-// نثار احتفالي بـ Skia، منح الجواهر عبر economy، وزرّ العودة للعالم.
-// كل شيء مرسوم بـ Skia — لا أصول فنية ثابتة.
+// شاشة المكافأة: 3 ألعاب تعليمية حسب المادّة، منح الجواهر عند الانتهاء
 
-import { useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  useWindowDimensions,
-} from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Canvas,
-  Path,
-  Circle,
-  Line,
-  Group,
-  vec,
-} from '@shopify/react-native-skia';
 import Hakeem from '../../components/Hakeem';
-import Confetti from '../../components/games/Confetti';
-import DrawGame from '../../components/games/DrawGame';
-import MirrorGame from '../../components/games/MirrorGame';
-import PulseGame from '../../components/games/PulseGame';
-import RotateGame from '../../components/games/RotateGame';
-import { buildPath } from '../../components/games/geometry';
-import type { GameId } from '../../components/games/types';
+import MathStarCollect from '../../components/games/MathStarCollect';
+import MathCountUp from '../../components/games/MathCountUp';
+import MathShapeMissing from '../../components/games/MathShapeMissing';
+import ScienceLifeCycle from '../../components/games/ScienceLifeCycle';
+import ScienceAnimalHabitat from '../../components/games/ScienceAnimalHabitat';
+import ScienceLivingNonLiving from '../../components/games/ScienceLivingNonLiving';
+import EnglishWordPicture from '../../components/games/EnglishWordPicture';
+import EnglishFirstLetter from '../../components/games/EnglishFirstLetter';
+import EnglishSortABC from '../../components/games/EnglishSortABC';
+import ArabicBuildWord from '../../components/games/ArabicBuildWord';
+import ArabicLetterPicture from '../../components/games/ArabicLetterPicture';
+import ArabicHarakat from '../../components/games/ArabicHarakat';
+import CalligraphyTrace from '../../components/games/CalligraphyTrace';
+import CalligraphyConnectDots from '../../components/games/CalligraphyConnectDots';
+import CalligraphyMatchShape from '../../components/games/CalligraphyMatchShape';
+import CreativeColorByNumber from '../../components/games/CreativeColorByNumber';
+import CreativeMatchColor from '../../components/games/CreativeMatchColor';
+import CreativeSymmetry from '../../components/games/CreativeSymmetry';
 import { awardGems } from '../../core/economy';
 import { recordActivity } from '../../core/streaks';
 import { theme } from '../../config/theme';
 
 type Phase = 'select' | 'play' | 'done';
+type GameKey = 'math1' | 'math2' | 'math3' | 'science1' | 'science2' | 'science3' | 'english1' | 'english2' | 'english3' | 'arabic1' | 'arabic2' | 'arabic3' | 'calligraphy1' | 'calligraphy2' | 'calligraphy3' | 'creative1' | 'creative2' | 'creative3';
 
-interface GameMeta {
-  id: GameId;
-  title: string;
-  desc: string;
-}
+interface GameMeta { id: GameKey; title: string; emoji: string }
 
-const GAMES: GameMeta[] = [
-  { id: 'draw', title: 'الرسم الحيّ', desc: 'أكمل مسار حكيم بإصبعك' },
-  { id: 'mirror', title: 'المرآة', desc: 'اعكس شكل حكيم على اليمين' },
-  { id: 'pulse', title: 'النبضة', desc: 'المس بإيقاع الضرب' },
-  { id: 'rotate', title: 'البُعد الثالث', desc: 'دوّر الصندوق وجد الجواب' },
-];
-
-// رسم مصغّر لكل لعبة (Skia) داخل بطاقة الاختيار.
-function GamePreview({ id, size }: { id: GameId; size: number }) {
-  const c = size / 2;
-  if (id === 'draw') {
-    const pts = [];
-    for (let i = 0; i <= 24; i++) {
-      const x = size * 0.12 + size * 0.76 * (i / 24);
-      const y = c + size * 0.18 * Math.sin((i / 24) * Math.PI * 2);
-      pts.push({ x, y });
-    }
-    return (
-      <Canvas style={{ width: size, height: size }}>
-        <Path path={buildPath(pts)} style="stroke" strokeWidth={5} strokeCap="round" color={theme.colors.primary} />
-      </Canvas>
-    );
-  }
-  if (id === 'mirror') {
-    const left = [
-      { x: size * 0.14, y: c + size * 0.2 },
-      { x: size * 0.32, y: c - size * 0.2 },
-      { x: size * 0.46, y: c + size * 0.12 },
-    ];
-    const right = left.map((p) => ({ x: size - p.x, y: p.y }));
-    return (
-      <Canvas style={{ width: size, height: size }}>
-        <Line p1={vec(c, size * 0.12)} p2={vec(c, size * 0.88)} style="stroke" strokeWidth={2} color={theme.colors.border} />
-        <Path path={buildPath(left)} style="stroke" strokeWidth={5} strokeCap="round" color={theme.colors.primary} />
-        <Path path={buildPath(right)} style="stroke" strokeWidth={5} strokeCap="round" color={theme.colors.primaryLight} />
-      </Canvas>
-    );
-  }
-  if (id === 'pulse') {
-    return (
-      <Canvas style={{ width: size, height: size }}>
-        <Circle cx={c} cy={c} r={size * 0.34} color={theme.colors.gem} opacity={0.18} />
-        <Circle cx={c} cy={c} r={size * 0.22} color={theme.colors.gem} opacity={0.4} />
-        <Circle cx={c} cy={c} r={size * 0.12} color={theme.colors.primaryDark} />
-      </Canvas>
-    );
-  }
-  // rotate — مكعّب سلكيّ مبسّط.
-  const o = size * 0.12;
-  const a = size * 0.24;
-  const b = size * 0.66;
-  const front = [
-    { x: a, y: a + o },
-    { x: b, y: a + o },
-    { x: b, y: b + o },
-    { x: a, y: b + o },
-  ];
-  const back = front.map((p) => ({ x: p.x + o, y: p.y - o }));
-  return (
-    <Canvas style={{ width: size, height: size }}>
-      <Group>
-        <Path path={buildPath([...back, back[0]])} style="stroke" strokeWidth={3} color={theme.colors.primaryLight} />
-        <Path path={buildPath([...front, front[0]])} style="stroke" strokeWidth={4} color={theme.colors.primary} />
-        {front.map((p, i) => (
-          <Line key={i} p1={vec(p.x, p.y)} p2={vec(back[i].x, back[i].y)} style="stroke" strokeWidth={2} color={theme.colors.primaryDark} />
-        ))}
-      </Group>
-    </Canvas>
-  );
+function getGamesForSubject(subject: string): GameMeta[] {
+  const games: Record<string, GameMeta[]> = {
+    math: [
+      { id: 'math1', title: 'جمع النجوم', emoji: '⭐' },
+      { id: 'math2', title: 'العدّ التصاعدي', emoji: '🔢' },
+      { id: 'math3', title: 'الشكل الناقص', emoji: '🧩' },
+    ],
+    science: [
+      { id: 'science1', title: 'دورة الحياة', emoji: '🦋' },
+      { id: 'science2', title: 'البيئات', emoji: '🌍' },
+      { id: 'science3', title: 'حيّ أم لا', emoji: '🌱' },
+    ],
+    english: [
+      { id: 'english1', title: 'Word & Picture', emoji: '🔤' },
+      { id: 'english2', title: 'First Letter', emoji: '🅰️' },
+      { id: 'english3', title: 'Sort ABC', emoji: '🔡' },
+    ],
+    arabic: [
+      { id: 'arabic1', title: 'كوّن الكلمة', emoji: '✍️' },
+      { id: 'arabic2', title: 'الحرف والصورة', emoji: '🎨' },
+      { id: 'arabic3', title: 'الحركات', emoji: 'َ◌' },
+    ],
+    calligraphy: [
+      { id: 'calligraphy1', title: 'تتبّع', emoji: '✏️' },
+      { id: 'calligraphy2', title: 'وصّل النقاط', emoji: '🔗' },
+      { id: 'calligraphy3', title: 'الأشكال', emoji: '📝' },
+    ],
+    creative: [
+      { id: 'creative1', title: 'لوّن بالأرقام', emoji: '🎨' },
+      { id: 'creative2', title: 'الألوان', emoji: '🌈' },
+      { id: 'creative3', title: 'التماثل', emoji: '🦋' },
+    ],
+  };
+  return games[subject] || games.math;
 }
 
 export default function RewardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const { childId } = useLocalSearchParams<{ childId: string }>();
+  const { childId, subject } = useLocalSearchParams<{ childId: string; subject?: string }>();
 
   const [phase, setPhase] = useState<Phase>('select');
-  const [game, setGame] = useState<GameId | null>(null);
+  const [selectedGame, setSelectedGame] = useState<GameKey | null>(null);
   const [gemsEarned, setGemsEarned] = useState(0);
-  const [streakDays, setStreakDays] = useState(0);
 
-  // تسجيل نشاط اليوم (يحدّث السلسلة والطقس) عند فتح الشاشة.
+  const games = getGamesForSubject(subject || 'math');
+  const color = theme.colors.primary;
+
   useEffect(() => {
-    (async () => {
-      if (!childId) return;
-      try {
-        const streak = await recordActivity(childId);
-        setStreakDays(streak.current);
-      } catch {
-        // نتجاهل بصمت — اللعب لا يتوقّف على السلسلة.
-      }
-    })();
+    if (childId) recordActivity(childId).catch(() => {});
   }, [childId]);
 
-  // عند انتهاء اللعبة: منح الجواهر والانتقال لشاشة الاحتفال.
-  const handleFinish = async (gems: number) => {
+  const handleGameComplete = async () => {
+    const gems = 5;
     setGemsEarned(gems);
     setPhase('done');
     if (childId) {
       try {
         await awardGems(childId, gems, 'لعبة المكافأة');
-      } catch {
-        // نتجاهل بصمت — الجواهر تُعرض، والمزامنة تُعاد لاحقًا.
-      }
+      } catch {}
     }
   };
 
-  // أبعاد منطقة اللعب.
-  const headerH = insets.top + 52;
-  const gameW = width;
-  const gameH = Math.max(260, height - headerH - insets.bottom - 16);
+  const handlePlayAgain = () => {
+    setPhase('select');
+    setSelectedGame(null);
+    setGemsEarned(0);
+  };
 
-  // ===== شاشة الاحتفال =====
+  const renderGame = () => {
+    if (!selectedGame) return null;
+    const props = { onComplete: handleGameComplete, color };
+
+    switch (selectedGame) {
+      case 'math1': return <MathStarCollect targetCount={5} {...props} />;
+      case 'math2': return <MathCountUp maxNumber={5} {...props} />;
+      case 'math3': return <MathShapeMissing {...props} />;
+      case 'science1': return <ScienceLifeCycle {...props} />;
+      case 'science2': return <ScienceAnimalHabitat {...props} />;
+      case 'science3': return <ScienceLivingNonLiving {...props} />;
+      case 'english1': return <EnglishWordPicture {...props} />;
+      case 'english2': return <EnglishFirstLetter {...props} />;
+      case 'english3': return <EnglishSortABC {...props} />;
+      case 'arabic1': return <ArabicBuildWord {...props} />;
+      case 'arabic2': return <ArabicLetterPicture {...props} />;
+      case 'arabic3': return <ArabicHarakat {...props} />;
+      case 'calligraphy1': return <CalligraphyTrace {...props} />;
+      case 'calligraphy2': return <CalligraphyConnectDots {...props} />;
+      case 'calligraphy3': return <CalligraphyMatchShape {...props} />;
+      case 'creative1': return <CreativeColorByNumber {...props} />;
+      case 'creative2': return <CreativeMatchColor {...props} />;
+      case 'creative3': return <CreativeSymmetry {...props} />;
+      default: return null;
+    }
+  };
+
   if (phase === 'done') {
     return (
-      <View style={[s.container, { paddingTop: insets.top + 20 }]}>
-        <Confetti width={width} height={height} />
-        <Hakeem mood="happy" size={130} />
-        <Text style={s.title}>رائع يا بطل!</Text>
-        <View style={s.rewardCard}>
-          <Text style={s.rewardLabel}>كسبت</Text>
-          <Text style={s.rewardAmount}>+{gemsEarned} 💎</Text>
-        </View>
-        {streakDays > 0 && (
-          <Text style={s.streakText}>
-            🔥 سلسلتك الآن {streakDays} {streakDays === 1 ? 'يوم' : 'أيام'}!
-          </Text>
-        )}
-        <TouchableOpacity
-          style={s.btn}
-          onPress={() => router.replace({ pathname: '/(child)/world', params: { childId } })}
-        >
-          <Text style={s.btnText}>العودة للعالم</Text>
+      <View style={[s.container, { paddingTop: insets.top }]}>
+        <Hakeem mood="happy" size={140} />
+        <Text style={s.congrats}>🎉 ممتاز يا بطل!</Text>
+        <Text style={s.gems}>كسبت {gemsEarned} جواهر 💎</Text>
+        <TouchableOpacity style={[s.btn, { backgroundColor: color }]} onPress={handlePlayAgain}>
+          <Text style={s.btnText}>العب مرة أخرى</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.btnSecondary} onPress={() => router.back()}>
+          <Text style={s.btnSecondaryText}>ارجع للعالم</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // ===== شاشة اللعب =====
-  if (phase === 'play' && game) {
+  if (phase === 'play' && selectedGame) {
     return (
-      <View style={[s.flex, { paddingTop: insets.top }]}>
-        <View style={s.playHeader}>
-          <TouchableOpacity
-            onPress={() => {
-              setGame(null);
-              setPhase('select');
-            }}
-            style={s.backBtn}
-          >
-            <Text style={s.backIcon}>↩</Text>
-          </TouchableOpacity>
-          <Text style={s.playTitle}>{GAMES.find((g) => g.id === game)?.title}</Text>
-          <View style={s.backBtn} />
-        </View>
-        <View style={s.gameArea}>
-          {game === 'draw' && <DrawGame width={gameW} height={gameH} onFinish={handleFinish} />}
-          {game === 'mirror' && <MirrorGame width={gameW} height={gameH} onFinish={handleFinish} />}
-          {game === 'pulse' && <PulseGame width={gameW} height={gameH} onFinish={handleFinish} />}
-          {game === 'rotate' && <RotateGame width={gameW} height={gameH} onFinish={handleFinish} />}
-        </View>
-      </View>
+      <ScrollView
+        style={s.flex}
+        contentContainerStyle={[s.playContainer, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}
+      >
+        {renderGame()}
+      </ScrollView>
     );
   }
 
-  // ===== شاشة الاختيار =====
-  const cardSize = (width - theme.spacing.md * 3) / 2;
   return (
-    <View style={[s.flex, { paddingTop: insets.top + 16 }]}>
-      <View style={s.selectHeader}>
-        <Hakeem mood="happy" size={72} />
-        <Text style={s.title}>اختَر لعبتك يا بطل!</Text>
-        <Text style={s.subtitle}>أتقن الدرس... الحين وقت اللعب والجواهر</Text>
-      </View>
-
-      <View style={s.grid}>
-        {GAMES.map((g) => (
-          <TouchableOpacity
-            key={g.id}
-            style={[s.card, { width: cardSize }]}
-            activeOpacity={0.85}
-            onPress={() => {
-              setGame(g.id);
-              setPhase('play');
-            }}
-          >
-            <View style={s.previewBox}>
-              <GamePreview id={g.id} size={cardSize * 0.66} />
-            </View>
-            <Text style={s.cardTitle}>{g.title}</Text>
-            <Text style={s.cardDesc}>{g.desc}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
+    <ScrollView
+      style={s.flex}
+      contentContainerStyle={[s.selectContainer, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}
+    >
+      <Text style={s.title}>اختر لعبتك 🎮</Text>
+      {games.map((game) => (
+        <TouchableOpacity
+          key={game.id}
+          style={[s.gameCard, { borderColor: color }]}
+          onPress={() => {
+            setSelectedGame(game.id);
+            setPhase('play');
+          }}
+        >
+          <Text style={{ fontSize: 50 }}>{game.emoji}</Text>
+          <Text style={s.gameTitle}>{game.title}</Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: theme.colors.background },
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    alignItems: 'center',
-    padding: theme.spacing.xl,
-    gap: 12,
-  },
-  title: { fontFamily: theme.fonts.heading, fontSize: 24, color: theme.colors.textDark, textAlign: 'center' },
-  subtitle: { fontFamily: theme.fonts.bodyMed, fontSize: 14, color: theme.colors.textMuted, textAlign: 'center' },
-
-  // الاختيار
-  selectHeader: { alignItems: 'center', gap: 6, paddingHorizontal: theme.spacing.md, marginBottom: 18 },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-  },
-  card: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    padding: 14,
-    alignItems: 'center',
-    gap: 6,
-  },
-  previewBox: { alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  cardTitle: { fontFamily: theme.fonts.headingMed, fontSize: 16, color: theme.colors.textDark },
-  cardDesc: { fontFamily: theme.fonts.body, fontSize: 12, color: theme.colors.textMuted, textAlign: 'center' },
-
-  // اللعب
-  playHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 8,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20, backgroundColor: theme.colors.background },
+  selectContainer: { alignItems: 'center', gap: 14, paddingHorizontal: 20 },
+  playContainer: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  title: { fontSize: 24, fontFamily: theme.fonts.heading, color: theme.colors.textDark },
+  gameCard: {
+    width: '100%',
+    maxWidth: 320,
+    padding: 20,
+    borderWidth: 3,
+    borderRadius: 16,
     backgroundColor: theme.colors.card,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
   },
-  backIcon: { fontSize: 19, color: theme.colors.primaryDark },
-  playTitle: { fontFamily: theme.fonts.heading, fontSize: 18, color: theme.colors.textDark },
-  gameArea: { flex: 1 },
-
-  // الاحتفال
-  rewardCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.radius.lg,
-    paddingVertical: 16,
-    paddingHorizontal: 30,
-    alignItems: 'center',
-  },
-  rewardLabel: { fontFamily: theme.fonts.bodyMed, fontSize: 14, color: theme.colors.textMuted },
-  rewardAmount: { fontFamily: theme.fonts.heading, fontSize: 30, color: theme.colors.gem },
-  streakText: { fontFamily: theme.fonts.bodyBold, fontSize: 14, color: theme.colors.streak },
-  btn: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    paddingVertical: 16,
-    paddingHorizontal: 40,
-    marginTop: 10,
-  },
-  btnText: { fontFamily: theme.fonts.headingMed, fontSize: 16, color: theme.colors.white },
+  gameTitle: { fontSize: 18, fontFamily: theme.fonts.bodyBold, color: theme.colors.textDark },
+  congrats: { fontSize: 26, fontFamily: theme.fonts.heading, color: theme.colors.textDark },
+  gems: { fontSize: 22, fontFamily: theme.fonts.bodyBold, color: theme.colors.gem },
+  btn: { paddingHorizontal: 40, paddingVertical: 16, borderRadius: 12 },
+  btnText: { fontSize: 18, fontFamily: theme.fonts.bodyBold, color: '#FFF' },
+  btnSecondary: { paddingHorizontal: 40, paddingVertical: 14, borderRadius: 12, borderWidth: 2, borderColor: theme.colors.border },
+  btnSecondaryText: { fontSize: 16, fontFamily: theme.fonts.bodyBold, color: theme.colors.textDark },
 });

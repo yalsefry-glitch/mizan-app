@@ -22,6 +22,7 @@ import {
   Tajawal_500Medium,
   Tajawal_700Bold,
 } from '@expo-google-fonts/tajawal';
+import { ThemeProvider } from '../contexts/ThemeContext';
 
 // مفتاح اللغة المحفوظة (عربي افتراضًا).
 const LANG_KEY = 'alamhakeem_language';
@@ -80,7 +81,9 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false, animation: 'fade' }} />
+      <ThemeProvider>
+        <Stack screenOptions={{ headerShown: false, animation: 'fade' }} />
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

@@ -307,12 +307,15 @@ export default function LessonScreen() {
 
         const uri = await blobToAudioUri(data);
         try {
-          await setAudioModeAsync({ playsInSilentMode: true });
+          await setAudioModeAsync({
+            playsInSilentMode: true,
+            shouldPlayInBackground: true,
+          });
         } catch {
           // وضع الصوت ليس حرجًا — نكمل.
         }
 
-        const player = createAudioPlayer({ uri });
+        const player = createAudioPlayer(uri);
         playerRef.current = player;
         setSpeaking(true);
         player.addListener('playbackStatusUpdate', (status: AudioStatus) => {
@@ -648,12 +651,8 @@ export default function LessonScreen() {
         )}
       </View>
 
-      <ScrollView
-        ref={scrollRef}
-        style={s.flex}
-        contentContainerStyle={[s.body, { paddingBottom: insets.bottom + 24 }]}
-        showsVerticalScrollIndicator={false}
-      >
+      {/* حكيم ثابت في الأعلى — لا يتحرك مع السكرول */}
+      <View style={s.hakeemFixed}>
         {/* حكيم في المنتصف داخل هالة نابضة بلون المادّة */}
         <TouchableOpacity activeOpacity={0.9} onPress={onTapHakeem} style={s.hakeemWrap}>
           <Animated.View
@@ -696,7 +695,15 @@ export default function LessonScreen() {
             <Text style={s.thinkText}>حكيم يفكّر...</Text>
           </View>
         )}
+      </View>
 
+      {/* المحتوى المتحرك: فيديو + مساعد الواجبات */}
+      <ScrollView
+        ref={scrollRef}
+        style={s.contentScroll}
+        contentContainerStyle={[s.contentBody, { paddingBottom: insets.bottom + 24 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* مشغّل الفيديو المعرفي (إن وُجد فيديو للدرس): بعد انتهائه يغذّي حكيم بنصّه */}
         {videoId && (
           <View style={s.videoBox}>
@@ -817,8 +824,17 @@ const s = StyleSheet.create({
   },
   genderIcon: { fontSize: 20 },
 
-  // الجسم
-  body: { alignItems: 'center', paddingHorizontal: theme.spacing.md, paddingTop: 18, gap: 18 },
+  // منطقة حكيم الثابتة
+  hakeemFixed: {
+    backgroundColor: theme.colors.background,
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: 18,
+    paddingBottom: 12,
+    gap: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
 
   hakeemWrap: { alignItems: 'center', justifyContent: 'center', width: 220, height: 220 },
   halo: {
@@ -827,6 +843,10 @@ const s = StyleSheet.create({
     height: 200,
     borderRadius: 100,
   },
+
+  // المحتوى المتحرك
+  contentScroll: { flex: 1 },
+  contentBody: { alignItems: 'center', paddingHorizontal: theme.spacing.md, paddingTop: 20, gap: 18 },
 
   // مؤشّر الاستماع
   listenRow: { alignItems: 'center', gap: 8 },
@@ -879,21 +899,21 @@ const s = StyleSheet.create({
   chipsHint: { fontFamily: theme.fonts.bodyBold, fontSize: 13, color: theme.colors.textMuted, textAlign: 'center' },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10 },
   chip: {
-    minHeight: 60,
-    minWidth: 130,
+    minHeight: 44,
+    minWidth: 90,
     backgroundColor: theme.colors.card,
-    borderWidth: 2.5,
-    borderRadius: theme.radius.xl,
-    paddingVertical: 14,
-    paddingHorizontal: 22,
+    borderWidth: 2,
+    borderRadius: theme.radius.lg,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
-  chipText: { fontFamily: theme.fonts.bodyBold, fontSize: 18, color: theme.colors.textDark, textAlign: 'center' },
+  chipText: { fontFamily: theme.fonts.bodyBold, fontSize: 14, color: theme.colors.textDark, textAlign: 'center' },
 
   // الاكتمال
   celebrate: { fontFamily: theme.fonts.heading, fontSize: 19, color: theme.colors.textDark, textAlign: 'center' },

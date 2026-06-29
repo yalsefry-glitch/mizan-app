@@ -76,11 +76,16 @@
 - **رابp المشروع**: `https://lzfgjvafmvofwjiyvelq.supabase.co`
 - المفاتيH السرّية في Supabase Secrets فقp (لا في الكود أبدًا).
 
-### مفتاH الذكاء (مهم جدًّا — درس مكلف)
-- المالك يملك **مفتاH Anthropic (Claude)** يبدأ بـ`sk-ant-api03-`. **ليس OpenAI.**
-- مخزّن في Supabase Secrets باسم `OPENAI_KEY` (الاسم مضلّل لكنه يحوي مفتاH Anthropic).
-- كل دوال الذكاء تتّصل بـ**Anthropic Messages API** (`https://api.anthropic.com/v1/messages`)، رأس `x-api-key`، نموذج **`claude-haiku-4-5`**.
-- **لا تستخدم OpenAI إطلاقًا** — المالك لا يملك مفتاH OpenAI صالحًا (يملك حساب ChatGPT فقp، لا API).
+### مفاتيح الذكاء (مهم جدًّا — درس مكلف)
+- **دوال الذكاء (rag-tutor، explain-lesson، ingest-pdf)**: تستخدم **Google Gemini**.
+  - النموذج: **`gemini-2.0-flash-exp`** (الأحدث والأسرع)
+  - التضمينات: **`text-embedding-004`**
+  - API: `https://generativelanguage.googleapis.com/v1beta/`
+  - المفتاح: `GEMINI_API_KEY` في Supabase Secrets
+- **دالة النطق (tts)**: تستخدم **ElevenLabs**.
+  - API: `https://api.elevenlabs.io/v1/text-to-speech/`
+  - النموذج: `eleven_multilingual_v2` (يدعم العربية)
+  - المفاتيح: `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_MALE` + `ELEVENLABS_VOICE_FEMALE`
 
 ### بيئة التطوير (الكودسبيس)
 - GitHub Codespace اسمه «supreme guacamole» (الفرع main).

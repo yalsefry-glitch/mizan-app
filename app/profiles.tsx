@@ -54,7 +54,7 @@ export default function ProfilesScreen() {
 
   const pickChild = (child: Child) => {
     // الدخول لتجربة الطفل، مع تمرير معرّفه.
-    router.push({ pathname: '/(child)/world', params: { childId: child.id } });
+    router.push({ pathname: '/(child)/home', params: { childId: child.id } });
   };
 
   if (loading) {
