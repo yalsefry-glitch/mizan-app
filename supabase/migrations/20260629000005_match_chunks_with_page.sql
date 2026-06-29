@@ -1,6 +1,9 @@
 -- Migration: تعديل match_lesson_chunks لإرجاع page_number
 -- حتى تستطيع rag-tutor تمرير رقم الصفحة للطفل.
 
+-- حذف الدالة القديمة (return type تغيّر، CREATE OR REPLACE لا يكفي)
+drop function if exists public.match_lesson_chunks(vector, uuid, int);
+
 create or replace function public.match_lesson_chunks(
   query_embedding vector(768),
   p_lesson_id uuid,
