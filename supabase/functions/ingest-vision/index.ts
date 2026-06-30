@@ -293,17 +293,25 @@ function buildTitle(pageType: string, lessonTitle: string, chapterNumber: number
   }
 }
 
-// مفتاح الدمج: الدروس تُدمج بنفس lesson_title، والاختبارات/التهيئة بنفس النوع + رقم الفصل.
-function mergeKeyFor(pageType: string, lessonTitle: string, chapterNumber: number | null): string {
-  if (pageType === 'lesson') return `lesson|${(lessonTitle || '').trim()}`;
+// مفتاح الدمج (لا يعتمد على العنوان الحرفيّ إطلاقًا):
+// - الدروس: chapter_number + lesson_number (فصفحتا الدرس الواحد لهما نفسهما، فتُدمجان مهما اختلف العنوان).
+// - الاختبارات/التهيئة: chapter_number + page_type (فصفحات الاختبار/التهيئة الواحدة تُدمج).
+function mergeKeyFor(
+  pageType: string,
+  chapterNumber: number | null,
+  lessonNumber: number | null
+): string {
+  if (pageType === 'lesson') return `lesson|ch:${chapterNumber ?? 'na'}|ln:${lessonNumber ?? 'na'}`;
   return `${pageType}|ch:${chapterNumber ?? 'na'}`;
 }
 
 // تجميع الصفحات المتتالية في عناصر قابلة للكتابة (القاعدة الذهبيّة: درس واحد = عنصر واحد).
 // يتجاهل cover/teacher/other. الصفحات المفقودة (التي فشل استخراجها) تكسر التتابع طبيعيًّا.
+// يورّث آخر chapter_number معروف للصفحات التي chapter_number=null فيها (قيد: ضمن الدفعة الواحدة).
 function groupPages(okPages: PageResult[]): WriteItem[] {
   const items: WriteItem[] = [];
   let current: WriteItem | null = null;
+  let lastChapter: number | null = null; // آخر رقم فصل معروف (للوراثة).
 
   const sorted = [...okPages].sort((a, b) => a.page_number - b.page_number);
 
@@ -315,22 +323,30 @@ function groupPages(okPages: PageResult[]): WriteItem[] {
       continue;
     }
 
-    const key = mergeKeyFor(type, p.lesson_title || '', p.chapter_number ?? null);
+    // وراثة آخر رقم فصل معروف: صفحة بـ chapter_number=null ترث آخر فصل رأته الدالّة.
+    const effectiveChapter = p.chapter_number ?? lastChapter;
+    if (p.chapter_number !== null && p.chapter_number !== undefined) {
+      lastChapter = p.chapter_number;
+    }
+
+    const lessonNumber = p.lesson_number ?? null;
+    const key = mergeKeyFor(type, effectiveChapter, lessonNumber);
 
     if (
       current &&
       current.mergeKey === key &&
       p.page_number === current.page_end + 1
     ) {
-      // استمرار نفس العنصر على صفحة متتالية.
+      // استمرار نفس العنصر على صفحة متتالية: نمدّ النطاق، ونُبقي عنوان الصفحة الأولى
+      // (الطالب) ونتجاهل عنوان الصفحة الثانية (المعلم) تمامًا.
       current.page_end = p.page_number;
       current.pages.push(p);
     } else {
-      // عنصر جديد.
+      // عنصر جديد — عنوانه من الصفحة الأولى، وفصله هو الفصل الفعليّ (بعد الوراثة).
       current = {
         lesson_type: type,
-        title: buildTitle(type, p.lesson_title || '', p.chapter_number ?? null),
-        chapter_number: p.chapter_number ?? null,
+        title: buildTitle(type, p.lesson_title || '', effectiveChapter),
+        chapter_number: effectiveChapter,
         chapter_title: p.chapter_title || '',
         page_start: p.page_number,
         page_end: p.page_number,
