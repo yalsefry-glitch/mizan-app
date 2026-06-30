@@ -90,9 +90,9 @@ function detectLessonsInBatch(pages: PageText[], currentChapter: { number: numbe
   const cleanText = (text: string) => text.replace(/[\u200E\u200F\u202A-\u202E]/g, '').replace(/\s+/g, ' ');
 
   // أنماط محسّنة لكشف البنية
-  // ملاحظة: التنسيق الفعلي في الكتب هو "الدرس : 3 العنوان" (الرقم بعد النقطتين)
+  // ملاحظة: بعد cleanText، النص "الدرس : 3التصنيف" (بلا مسافة بين الرقم والعنوان!)
   const chapterPattern = /الفصل\s+[:：]\s*(\d+)\s*[:：]?\s*(.+)/;
-  const lessonNumPattern = /الدرس\s+[:：]\s*(\d+)\s+(.+)/; // "الدرس : 3 العنوان"
+  const lessonNumPattern = /الدرس\s+[:：]\s*(\d+)\s*(.+)/; // "الدرس : 3التصنيف" (قد لا توجد مسافة)
   const lessonCodePattern = /^(\d+)-(\d+)\s+(.+)/; // "5-1 العنوان" (فصل-درس)
   const testMidPattern = /اختبار\s+منتصف\s+الفصل/;
   const testChapterPattern = /اختبار\s+الفصل/;
