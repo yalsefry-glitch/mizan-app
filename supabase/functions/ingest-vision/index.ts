@@ -294,24 +294,30 @@ function buildTitle(pageType: string, lessonTitle: string, chapterNumber: number
 }
 
 // مفتاح الدمج (لا يعتمد على العنوان الحرفيّ إطلاقًا):
-// - الدروس: chapter_number + lesson_number (فصفحتا الدرس الواحد لهما نفسهما، فتُدمجان مهما اختلف العنوان).
+// - الدروس برقم معروف: chapter_number + lesson_number (فصفحتا الدرس الواحد لهما نفسهما، فتُدمجان).
+// - الدروس بلا رقم (lesson_number=null): مفتاح فريد بالصفحة حتى لا تُدمج بالرقم المشترك null خطأً؛
+//   الدمج عندئذٍ يتمّ في groupPages بتطابق العنوان المنظّف مع الصفحة السابقة المتتالية فقط.
 // - الاختبارات/التهيئة: chapter_number + page_type (فصفحات الاختبار/التهيئة الواحدة تُدمج).
 function mergeKeyFor(
   pageType: string,
   chapterNumber: number | null,
-  lessonNumber: number | null
+  lessonNumber: number | null,
+  pageNumber: number
 ): string {
-  if (pageType === 'lesson') return `lesson|ch:${chapterNumber ?? 'na'}|ln:${lessonNumber ?? 'na'}`;
+  if (pageType === 'lesson') {
+    if (lessonNumber === null) return `lesson|ch:${chapterNumber ?? 'na'}|ln:na|p:${pageNumber}`;
+    return `lesson|ch:${chapterNumber ?? 'na'}|ln:${lessonNumber}`;
+  }
   return `${pageType}|ch:${chapterNumber ?? 'na'}`;
 }
 
 // تجميع الصفحات المتتالية في عناصر قابلة للكتابة (القاعدة الذهبيّة: درس واحد = عنصر واحد).
 // يتجاهل cover/teacher/other. الصفحات المفقودة (التي فشل استخراجها) تكسر التتابع طبيعيًّا.
-// يورّث آخر chapter_number معروف للصفحات التي chapter_number=null فيها (قيد: ضمن الدفعة الواحدة).
-function groupPages(okPages: PageResult[]): WriteItem[] {
+// initialChapter: آخر فصل معروف من القاعدة قبل هذه الدفعة (وراثة دائمة عبر الدفعات).
+function groupPages(okPages: PageResult[], initialChapter: number | null = null): WriteItem[] {
   const items: WriteItem[] = [];
   let current: WriteItem | null = null;
-  let lastChapter: number | null = null; // آخر رقم فصل معروف (للوراثة).
+  let lastChapter: number | null = initialChapter; // يبدأ بآخر فصل من القاعدة، لا null.
 
   const sorted = [...okPages].sort((a, b) => a.page_number - b.page_number);
 
@@ -323,24 +329,35 @@ function groupPages(okPages: PageResult[]): WriteItem[] {
       continue;
     }
 
-    // وراثة آخر رقم فصل معروف: صفحة بـ chapter_number=null ترث آخر فصل رأته الدالّة.
+    // وراثة آخر رقم فصل معروف: صفحة بـ chapter_number=null ترث آخر فصل (من الدفعة أو القاعدة).
     const effectiveChapter = p.chapter_number ?? lastChapter;
     if (p.chapter_number !== null && p.chapter_number !== undefined) {
       lastChapter = p.chapter_number;
     }
 
     const lessonNumber = p.lesson_number ?? null;
-    const key = mergeKeyFor(type, effectiveChapter, lessonNumber);
+    const key = mergeKeyFor(type, effectiveChapter, lessonNumber, p.page_number);
+    const consecutive = !!current && p.page_number === current.page_end + 1;
 
-    if (
-      current &&
-      current.mergeKey === key &&
-      p.page_number === current.page_end + 1
-    ) {
-      // استمرار نفس العنصر على صفحة متتالية: نمدّ النطاق، ونُبقي عنوان الصفحة الأولى
-      // (الطالب) ونتجاهل عنوان الصفحة الثانية (المعلم) تمامًا.
-      current.page_end = p.page_number;
-      current.pages.push(p);
+    // (أ) دمج عاديّ بالمفتاح المشترك (فصل+رقم درس، أو فصل+نوع للاختبارات/التهيئة).
+    const mergeByKey = !!current && current.mergeKey === key && consecutive;
+
+    // (ب) احتياط للدروس بلا رقم درس (null): لا تُدمج بالرقم المشترك (مفتاحها فريد بالصفحة)،
+    //     بل تُدمج فقط إذا تطابق عنوانها المنظّف مع الصفحة السابقة المتتالية.
+    const cleanedIncoming = cleanTitle(p.lesson_title || '');
+    const mergeByTitle =
+      !!current &&
+      current.lesson_type === 'lesson' &&
+      type === 'lesson' &&
+      lessonNumber === null &&
+      consecutive &&
+      cleanedIncoming !== '' &&
+      cleanedIncoming === current.title;
+
+    if (mergeByKey || mergeByTitle) {
+      // استمرار نفس العنصر: نمدّ النطاق، ونُبقي عنوان الصفحة الأولى (الطالب) ونتجاهل الثانية.
+      current!.page_end = p.page_number;
+      current!.pages.push(p);
     } else {
       // عنصر جديد — عنوانه من الصفحة الأولى، وفصله هو الفصل الفعليّ (بعد الوراثة).
       current = {
@@ -451,8 +468,24 @@ Deno.serve(async (req: Request) => {
     }
 
     // (٢) تجميع الصفحات الناجحة في دروس/اختبارات (القاعدة الذهبيّة).
+    // وراثة الفصل عبر الدفعات: أعلى chapter_number لدرس سابق (page_start < page_from) لنفس المادة/الجزء.
+    let initialChapter: number | null = null;
+    const { data: prevChapterRow } = await supabase
+      .from('lessons')
+      .select('chapter_number')
+      .eq('subject_id', subjectId)
+      .eq('part_number', partNumber)
+      .lt('page_start', pageFrom)
+      .not('chapter_number', 'is', null)
+      .order('chapter_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (prevChapterRow?.chapter_number !== null && prevChapterRow?.chapter_number !== undefined) {
+      initialChapter = prevChapterRow.chapter_number;
+    }
+
     const okPages = results.filter((r) => r.ok);
-    const items = groupPages(okPages);
+    const items = groupPages(okPages, initialChapter);
 
     // (٣) كتابة كل عنصر: lessons (upsert/استمرار) ثمّ lesson_chunks مع embeddings.
     let lessonsWritten = 0;
