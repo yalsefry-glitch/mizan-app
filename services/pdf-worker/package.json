@@ -1,0 +1,24 @@
+{
+  "name": "mizan-pdf-worker",
+  "version": "1.0.0",
+  "description": "Hardened PDF processing worker for Mizan book ingestion",
+  "type": "commonjs",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.10",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "pdf2pic": "^3.1.3",
+    "sharp": "^0.33.5"
+  },
+  "author": "",
+  "license": "ISC"
+}
