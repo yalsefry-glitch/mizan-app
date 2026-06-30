@@ -318,7 +318,6 @@ Deno.serve(async (req: Request) => {
         .from('lessons')
         .insert({
           subject_id: job.subject_id,
-          grade_id: job.grade_id,
           title: detected.title,
           part_number: job.part_number,
           chapter_number: detected.chapter_number,
