@@ -8,6 +8,7 @@ const multer = require('multer');
 const { fromPath } = require('pdf2pic');
 const sharp = require('sharp');
 const { createClient } = require('@supabase/supabase-js');
+const ws = require('ws');
 const fs = require('fs');
 const fsPromises = require('fs/promises');
 const path = require('path');
@@ -32,8 +33,16 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !GEMINI_API_KEY || !INGEST_VI
   process.exit(1);
 }
 
-// Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+// Supabase client with ws transport for Node.js 20+ realtime compatibility
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+  realtime: {
+    transport: ws,
+  },
+});
 
 // ═══ Constants ═══
 const GEMINI_MODEL = 'gemini-2.5-flash';
