@@ -103,74 +103,71 @@ function detectLessonsInBatch(pages: PageText[], currentChapter: { number: numbe
     const text = cleanText(page.text);
     const textLines = text.split('\n').map(l => l.trim()).filter(l => l.length > 5);
 
-    // تحديث الفصل الحالي
+    // ١. كشف الفصل الصريح "الفصل : N العنوان"
     const chapterMatch = text.match(chapterPattern);
     if (chapterMatch) {
       chapter = {
         number: parseInt(chapterMatch[1]),
         title: chapterMatch[2].trim(),
       };
+      console.log(`[Page ${page.pageNumber}] فصل جديد: ${chapter.number} - ${chapter.title}`);
     }
 
-    // كشف العناوين
+    // ٢. كشف الاختبارات (قبل الدروس لأنها أولوية)
     if (introPattern.test(text)) {
+      const chNum = chapter.number || 1;
       lessons.push({
-        title: `${chapter.title || 'الفصل ' + chapter.number} - التهيئة`,
+        title: `${chapter.title || 'الفصل ' + chNum} - التهيئة`,
         lesson_type: 'intro',
-        chapter_number: chapter.number,
-        chapter_title: chapter.title,
+        chapter_number: chNum,
+        chapter_title: chapter.title || `الفصل ${chNum}`,
         page_start: page.pageNumber,
       });
+      console.log(`[Page ${page.pageNumber}] تهيئة: فصل ${chNum}`);
       continue;
     }
 
     if (testMidPattern.test(text)) {
+      const chNum = chapter.number || 1;
       lessons.push({
-        title: `اختبار منتصف الفصل ${chapter.number}`,
+        title: `اختبار منتصف الفصل ${chNum}`,
         lesson_type: 'test_mid',
-        chapter_number: chapter.number,
-        chapter_title: chapter.title,
+        chapter_number: chNum,
+        chapter_title: chapter.title || `الفصل ${chNum}`,
         page_start: page.pageNumber,
       });
+      console.log(`[Page ${page.pageNumber}] اختبار منتصف: فصل ${chNum}`);
       continue;
     }
 
     if (testChapterPattern.test(text)) {
+      const chNum = chapter.number || 1;
       lessons.push({
-        title: `اختبار الفصل ${chapter.number}`,
+        title: `اختبار الفصل ${chNum}`,
         lesson_type: 'test_chapter',
-        chapter_number: chapter.number,
-        chapter_title: chapter.title,
+        chapter_number: chNum,
+        chapter_title: chapter.title || `الفصل ${chNum}`,
         page_start: page.pageNumber,
       });
+      console.log(`[Page ${page.pageNumber}] اختبار فصل: ${chNum}`);
       continue;
     }
 
     if (testCumulativePattern.test(text)) {
+      const chNum = chapter.number || 1;
       lessons.push({
         title: `الاختبار التراكمي`,
         lesson_type: 'test_cumulative',
-        chapter_number: chapter.number,
-        chapter_title: chapter.title,
+        chapter_number: chNum,
+        chapter_title: chapter.title || `الفصل ${chNum}`,
         page_start: page.pageNumber,
       });
+      console.log(`[Page ${page.pageNumber}] اختبار تراكمي`);
       continue;
     }
 
-    // كشف الدروس: نمط "الدرس : 3 العنوان"
-    const lessonNumMatch = text.match(lessonNumPattern);
-    if (lessonNumMatch) {
-      lessons.push({
-        title: lessonNumMatch[2].trim(),
-        lesson_type: 'lesson',
-        chapter_number: chapter.number,
-        chapter_title: chapter.title,
-        page_start: page.pageNumber,
-      });
-      continue;
-    }
-
-    // كشف الدروس: نمط "5-1 العنوان" (فصل-درس)
+    // ٣. كشف الدروس: نمط "N-M العنوان" (فصل-درس) - أولوية أعلى
+    let foundLesson = false;
     for (const line of textLines) {
       const lessonCodeMatch = line.match(lessonCodePattern);
       if (lessonCodeMatch) {
@@ -178,7 +175,7 @@ function detectLessonsInBatch(pages: PageText[], currentChapter: { number: numbe
         const lessonNum = parseInt(lessonCodeMatch[2]);
         const title = lessonCodeMatch[3].trim();
 
-        // تحديث الفصل الحالي إن تغيّر
+        // تحديث الفصل الحالي
         if (chapterNum !== chapter.number) {
           chapter = {
             number: chapterNum,
@@ -193,8 +190,29 @@ function detectLessonsInBatch(pages: PageText[], currentChapter: { number: numbe
           chapter_title: chapter.title,
           page_start: page.pageNumber,
         });
-        break; // درس واحد لكل صفحة
+        console.log(`[Page ${page.pageNumber}] درس (نمط N-M): ${chapterNum}-${lessonNum} ${title}`);
+        foundLesson = true;
+        break;
       }
+    }
+    if (foundLesson) continue;
+
+    // ٤. كشف الدروس: نمط "الدرس : N العنوان" (استخدم الفصل المتتبع)
+    const lessonNumMatch = text.match(lessonNumPattern);
+    if (lessonNumMatch) {
+      const lessonNumber = parseInt(lessonNumMatch[1]);
+      const title = lessonNumMatch[2].trim();
+      const chNum = chapter.number || 1; // افتراضي 1 إن لم يمر فصل
+
+      lessons.push({
+        title: title,
+        lesson_type: 'lesson',
+        chapter_number: chNum,
+        chapter_title: chapter.title || `الفصل ${chNum}`,
+        page_start: page.pageNumber,
+      });
+      console.log(`[Page ${page.pageNumber}] درس (نمط عادي): ${lessonNumber}. ${title} (فصل ${chNum})`);
+      continue;
     }
   }
 
