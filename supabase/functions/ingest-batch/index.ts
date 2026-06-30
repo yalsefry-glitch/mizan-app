@@ -298,6 +298,7 @@ Deno.serve(async (req: Request) => {
       title: job.current_chapter_title || '',
     };
     const { lessons: detectedLessons, lastChapter } = detectLessonsInBatch(pages, currentChapter);
+    console.log(`[Job] كُشف ${detectedLessons.length} عنصر (دروس/اختبارات) في الصفحات ${from}-${to}`);
 
     let currentLessonId = job.current_lesson_id;
     let lessonsCreatedCount = 0;
@@ -313,7 +314,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // إنشاء درس جديد
-      const { data: newLesson } = await supabase
+      const { data: newLesson, error: insertError } = await supabase
         .from('lessons')
         .insert({
           subject_id: job.subject_id,
@@ -330,10 +331,14 @@ Deno.serve(async (req: Request) => {
         .select('id')
         .single();
 
-      if (newLesson) {
+      if (insertError) {
+        console.error(`[Job] فشل إنشاء الدرس "${detected.title}":`, insertError.message, insertError.code, insertError.details);
+      } else if (newLesson) {
         currentLessonId = newLesson.id;
         lessonsCreatedCount++;
         console.log(`[Job] درس جديد: ${detected.title} (ص${detected.page_start})`);
+      } else {
+        console.warn(`[Job] لا بيانات من إدراج "${detected.title}" (بلا خطأ)`);
       }
     }
 
