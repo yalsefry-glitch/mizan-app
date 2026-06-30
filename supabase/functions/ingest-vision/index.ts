@@ -147,11 +147,19 @@ function buildImageUrl(storageBase: string, bookSlug: string, pageNumber: number
   return `${storageBase}/storage/v1/object/public/lesson_pages/${bookSlug}/page-${nnn}.png`;
 }
 
-// تنظيف عنوان الدرس (إزالة رموز "1-1"، أرقام ملحقة).
+// تنظيف عنوان الدرس: يزيل رمز درس بادئ "1-1" ورقم صفحة منفصل ملحق بنهاية العنوان.
+// لا يقص الأرقام التي جزء من العنوان (مثل "الأعداد ١٨، ١٩، ٢٠" تبقى كما هي).
 function cleanTitle(s: string): string {
   let t = (s || '').trim();
+  // رمز درس بادئ: "1-1" أو "٣-٢".
   t = t.replace(/^[\d٠-٩]+\s*[-–−]\s*[\d٠-٩]+\s*/, '');
-  t = t.replace(/\s*[\d٠-٩]+\s*$/, '');
+  // رقم صفحة ملحق منفصل بنهاية العنوان (رقم واحد فقط بعد مسافة، ليس ضمن سلسلة أعداد).
+  // نتحقق: إن كان قبل الرقم الأخير فاصلة/واو، فهو ضمن سلسلة أعداد، لا نحذفه.
+  // مثال: "أحل المسألة 13" ← نحذف 13، "الأعداد ١٨، ١٩" ← لا نحذف.
+  if (!/[،,و]\s*[\d٠-٩]+\s*$/.test(t)) {
+    // لا توجد فاصلة/واو قبل الرقم الأخير → رقم صفحة منفصل.
+    t = t.replace(/\s+[\d٠-٩]+\s*$/, '');
+  }
   t = t.replace(/\s+/g, ' ').trim();
   return t;
 }
@@ -211,6 +219,39 @@ async function analyzeChapter(
             temperature: 0,
             maxOutputTokens: 16384,
             responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  item_type: {
+                    type: 'string',
+                    enum: ['lesson', 'test_mid', 'test_chapter', 'test_cumulative', 'intro', 'cover', 'teacher', 'other'],
+                  },
+                  chapter_number: {
+                    type: 'integer',
+                    nullable: true,
+                  },
+                  chapter_title: {
+                    type: 'string',
+                  },
+                  lesson_title: {
+                    type: 'string',
+                    description: 'العنوان الكامل للدرس كما يظهر في ترويسة الصفحة، دون قص أي أرقام أو كلمات جزء من العنوان (مثال: "الأعداد ١٨، ١٩، ٢٠" يُرجع كاملاً)',
+                  },
+                  page_start: {
+                    type: 'integer',
+                  },
+                  page_end: {
+                    type: 'integer',
+                  },
+                  full_text: {
+                    type: 'string',
+                  },
+                },
+                required: ['item_type', 'page_start', 'page_end', 'full_text'],
+              },
+            },
           },
         }),
       }
@@ -276,6 +317,7 @@ Deno.serve(async (req: Request) => {
     const pageFrom = toNumberOrNull(body.page_from);
     const pageTo = toNumberOrNull(body.page_to);
     const mode: string = body.mode === 'commit' ? 'commit' : 'preview';
+    const overrideChapter = toNumberOrNull(body.chapter_number); // رقم فصل حتمي (يُشتق من نطاق الصفحات)
 
     // التحقق.
     if (!bookSlug) return json({ error: 'book_slug مطلوب' }, 400);
@@ -339,24 +381,28 @@ Deno.serve(async (req: Request) => {
 
     for (const item of items) {
       try {
-        // (1) عنوان نهائي.
+        // (1) اشتقاق رقم الفصل: إن مُرّر chapter_number في الطلب، يُستخدم حتميًّا (نتجاهل Gemini).
+        // وإلّا نستخدم ما أرجعه Gemini كاحتياط.
+        const finalChapter = overrideChapter !== null ? overrideChapter : item.chapter_number;
+
+        // (2) عنوان نهائي.
         const title =
           item.lesson_title ||
           (item.item_type === 'intro'
-            ? item.chapter_number
-              ? `تهيئة الفصل ${item.chapter_number}`
+            ? finalChapter
+              ? `تهيئة الفصل ${finalChapter}`
               : 'تهيئة'
             : item.item_type === 'test_mid'
             ? 'اختبار منتصف الفصل'
             : item.item_type === 'test_chapter'
-            ? item.chapter_number
-              ? `اختبار الفصل ${item.chapter_number}`
+            ? finalChapter
+              ? `اختبار الفصل ${finalChapter}`
               : 'اختبار الفصل'
             : item.item_type === 'test_cumulative'
             ? 'اختبار تراكمي'
             : 'عنصر');
 
-        // (2) upsert الدرس (idempotent).
+        // (3) upsert الدرس (idempotent).
         const { data: newLesson, error: upErr } = await supabase
           .from('lessons')
           .upsert(
@@ -364,7 +410,7 @@ Deno.serve(async (req: Request) => {
               subject_id: subjectId,
               title,
               part_number: partNumber,
-              chapter_number: item.chapter_number,
+              chapter_number: finalChapter,
               chapter_title: item.chapter_title,
               lesson_type: item.item_type,
               lesson_order: item.page_start,
