@@ -1,5 +1,6 @@
 // services/pdf-worker/index.js
-// Hardened PDF processing worker for Mizan book ingestion on Render.
+// Async job pattern for Mizan PDF processing (beats Render 100s load balancer limit)
+// POST /process-book returns immediately with job_id, processing happens in background
 
 require('dotenv').config();
 const express = require('express');
@@ -46,38 +47,50 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 // ═══ Constants ═══
 const GEMINI_MODEL = 'gemini-2.5-flash';
-const RENDER_DENSITY = 150;
-const CONVERT_CHUNK = 5;
-const DETECT_DENSITY = 50;
-const DETECT_JPEG_QUALITY = 40;
-const DETECT_BATCH = 15;
+const RENDER_DENSITY = 150; // Full quality for uploaded images
+const CONVERT_CHUNK = 3; // Reduced to 3 for memory efficiency (streamed delete)
+const DETECT_DENSITY = 50; // Low DPI for chapter detection
+const DETECT_JPEG_QUALITY = 40; // Compressed detection images
+const DETECT_BATCH = 15; // Pages per Gemini detection call
 
 // ═══ Express app ═══
 const app = express();
 
 // CORS configuration (before routes)
 const corsOptions = {
-  origin: ALLOWED_ORIGIN,
-  methods: ['GET', 'POST'],
+  origin: ALLOWED_ORIGIN === '*' ? '*' : ALLOWED_ORIGIN.split(','),
+  methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 };
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
+// Body parser for JSON
 app.use(express.json());
 
-// Multer configuration
+// Multer upload config (store in temp with job_id subdirectory)
 const upload = multer({
   storage: multer.diskStorage({
-    destination: os.tmpdir(),
+    destination: (req, file, cb) => {
+      const jobId = req.body.job_id || Date.now().toString();
+      const jobDir = path.join(os.tmpdir(), 'jobs', jobId);
+      fs.mkdirSync(jobDir, { recursive: true });
+      req.jobDir = jobDir; // Store for later use
+      cb(null, jobDir);
+    },
     filename: (req, file, cb) => {
-      cb(null, `upload-${Date.now()}-${file.originalname}`);
+      cb(null, 'book.pdf');
     },
   }),
-  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
 });
 
-// ═══ Helper: Get PDF page count ═══
+// ═══════════════════════════════════════════════════════════════
+// HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+// Get PDF page count using pdfinfo
 function getPdfPageCount(pdfPath) {
   try {
     const output = execSync(`pdfinfo "${pdfPath}"`, { encoding: 'utf8' });
@@ -88,132 +101,157 @@ function getPdfPageCount(pdfPath) {
   }
 }
 
-// ═══ CORE FUNCTION 1: Convert PDF to images (chunked to avoid OOM) ═══
-async function convertPdfToImages(pdfPath, outDir, totalPages) {
-  console.log(`📄 Converting PDF: ${totalPages} pages (chunk size: ${CONVERT_CHUNK})`);
+// Update job status in database
+async function updateJob(jobId, updates) {
+  const { error } = await supabase
+    .from('ingestion_jobs')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', jobId);
 
-  const pageFiles = [];
+  if (error) {
+    console.error(`⚠️ Failed to update job ${jobId}:`, error.message);
+  }
+}
+
+// Convert PDF pages to images (streamed: convert → upload → compress for detection → delete)
+// Returns: { uploadedPages: [{pageNum, imageUrl}], detectionImages: [{pageNum, buffer}] }
+async function convertAndUploadPages(pdfPath, totalPages, bookSlug, jobId) {
+  console.log(`📄 Converting & uploading PDF: ${totalPages} pages (chunk size: ${CONVERT_CHUNK})`);
+
+  const uploadedPages = [];
+  const detectionImages = []; // Compressed images kept in memory for detection
 
   for (let from = 1; from <= totalPages; from += CONVERT_CHUNK) {
     const to = Math.min(from + CONVERT_CHUNK - 1, totalPages);
-    console.log(`  Converting batch ${from}-${to}...`);
+    await updateJob(jobId, {
+      status: 'converting',
+      current_step: `Converting & uploading pages ${from}-${to}...`,
+    });
+    console.log(`  Batch ${from}-${to}: converting...`);
 
     const converter = fromPath(pdfPath, {
       density: RENDER_DENSITY,
       saveFilename: 'page',
-      savePath: outDir,
+      savePath: path.dirname(pdfPath),
       format: 'png',
       preserveAspectRatio: true,
     });
 
-    // Convert each page in this batch individually (buffer-based to prevent image loss)
+    // Convert each page individually
     for (let pageNum = from; pageNum <= to; pageNum++) {
       try {
         const result = await converter(pageNum, { responseType: 'buffer' });
 
-        // Write buffer directly to file with zero-padded name: page-001.png
-        const nnn = String(pageNum).padStart(3, '0');
-        const targetPath = path.join(outDir, `page-${nnn}.png`);
-
-        // pdf2pic may return buffer in different fields depending on version
+        // Extract buffer (handle different pdf2pic versions)
         let buffer = null;
-        if (result && result.buffer) {
-          buffer = result.buffer;
-        } else if (result && result.base64) {
-          buffer = Buffer.from(result.base64, 'base64');
-        } else if (Buffer.isBuffer(result)) {
-          buffer = result;
-        }
+        if (result && result.buffer) buffer = result.buffer;
+        else if (result && result.base64) buffer = Buffer.from(result.base64, 'base64');
+        else if (Buffer.isBuffer(result)) buffer = result;
 
-        if (buffer) {
-          await fsPromises.writeFile(targetPath, buffer);
-          pageFiles.push({ pageNum, path: targetPath, filename: `page-${nnn}.png` });
-        } else {
+        if (!buffer) {
           console.error(`  ⚠️ Page ${pageNum}: no buffer in result`);
+          continue;
         }
-      } catch (err) {
-        console.error(`  ⚠️ Failed to convert page ${pageNum}: ${err.message}`);
-      }
-    }
-  }
 
-  console.log(`✅ Converted ${pageFiles.length}/${totalPages} pages`);
-  return { pageFiles: pageFiles.sort((a, b) => a.pageNum - b.pageNum), totalPages };
-}
+        const nnn = String(pageNum).padStart(3, '0');
+        const filename = `page-${nnn}.png`;
 
-// ═══ Helper: Upload images to Supabase ═══
-async function uploadImages(pageFiles, bookSlug) {
-  console.log(`📤 Uploading ${pageFiles.length} images to lesson_pages/${bookSlug}...`);
+        // (1) Upload full-quality image to Supabase Storage
+        const storagePath = `lesson_pages/${bookSlug}/${filename}`;
+        const { error: uploadErr } = await supabase.storage
+          .from('lesson_pages')
+          .upload(storagePath, buffer, {
+            contentType: 'image/png',
+            upsert: true,
+          });
 
-  const failed = [];
-  let uploaded = 0;
+        if (uploadErr) {
+          console.error(`  ⚠️ Failed to upload page ${pageNum}: ${uploadErr.message}`);
+          continue;
+        }
 
-  for (const { pageNum, path: filePath, filename } of pageFiles) {
-    try {
-      const fileBuffer = await fsPromises.readFile(filePath);
-      const remotePath = `${bookSlug}/${filename}`;
+        const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/lesson_pages/${storagePath}`;
+        uploadedPages.push({ pageNum, imageUrl });
 
-      const { error } = await supabase.storage
-        .from('lesson_pages')
-        .upload(remotePath, fileBuffer, {
-          contentType: 'image/png',
-          upsert: true,
-        });
-
-      if (error) {
-        failed.push({ pageNum, error: error.message });
-        console.error(`  ⚠️ Failed to upload page ${pageNum}: ${error.message}`);
-      } else {
-        uploaded++;
-      }
-    } catch (err) {
-      failed.push({ pageNum, error: err.message });
-      console.error(`  ⚠️ Failed to upload page ${pageNum}: ${err.message}`);
-    }
-  }
-
-  console.log(`✅ Uploaded ${uploaded}/${pageFiles.length} images`);
-  return { uploaded, failed };
-}
-
-// ═══ CORE FUNCTION 2: Detect chapters via Gemini (compressed images + batches) ═══
-async function detectChapters(pageFiles, totalPages) {
-  console.log(`🔍 Detecting chapters from ${totalPages} pages (batch size: ${DETECT_BATCH})...`);
-
-  const allChapters = [];
-
-  // Process in batches to stay within Gemini limits
-  for (let i = 0; i < pageFiles.length; i += DETECT_BATCH) {
-    const batch = pageFiles.slice(i, i + DETECT_BATCH);
-    const batchStart = batch[0].pageNum;
-    const batchEnd = batch[batch.length - 1].pageNum;
-    console.log(`  Analyzing batch pages ${batchStart}-${batchEnd}...`);
-
-    // Create compressed detection images in memory
-    const parts = [];
-    for (const { pageNum, path: filePath } of batch) {
-      try {
-        const buffer = await sharp(filePath)
+        // (2) Create compressed version for detection (kept in memory only)
+        const compressedBuffer = await sharp(buffer)
           .resize({ width: 600 })
           .jpeg({ quality: DETECT_JPEG_QUALITY })
           .toBuffer();
 
-        const base64 = buffer.toString('base64');
-        parts.push({ text: `صورة الصفحة ${pageNum}:` });
-        parts.push({
-          inlineData: {
-            mimeType: 'image/jpeg',
-            data: base64
-          }
-        });
+        detectionImages.push({ pageNum, buffer: compressedBuffer });
+
+        console.log(`    ✓ Page ${pageNum}: uploaded + compressed for detection`);
       } catch (err) {
-        console.error(`    ⚠️ Failed to compress page ${pageNum}: ${err.message}`);
+        console.error(`  ⚠️ Failed to process page ${pageNum}: ${err.message}`);
       }
     }
 
-    if (parts.length === 0) continue;
+    // Update progress
+    await updateJob(jobId, { pages_uploaded: uploadedPages.length });
+  }
 
-    // Call Gemini API
+  console.log(`✅ Uploaded ${uploadedPages.length}/${totalPages} pages`);
+  return { uploadedPages, detectionImages };
+}
+
+// Detect chapters using compressed images (batched Gemini calls)
+async function detectChapters(detectionImages, totalPages, jobId) {
+  console.log(`🔍 Detecting chapters from ${totalPages} pages (batch size: ${DETECT_BATCH})...`);
+  await updateJob(jobId, {
+    status: 'detecting',
+    current_step: 'Analyzing page images to detect chapters...',
+  });
+
+  const allChapters = [];
+
+  for (let i = 0; i < detectionImages.length; i += DETECT_BATCH) {
+    const batch = detectionImages.slice(i, i + DETECT_BATCH);
+    const startPage = batch[0].pageNum;
+    const endPage = batch[batch.length - 1].pageNum;
+
+    console.log(`  Analyzing batch pages ${startPage}-${endPage}...`);
+    await updateJob(jobId, { current_step: `Analyzing pages ${startPage}-${endPage}...` });
+
+    const parts = [];
+    for (const { pageNum, buffer } of batch) {
+      const base64 = buffer.toString('base64');
+      parts.push({ text: `صورة الصفحة ${pageNum}:` });
+      parts.push({
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: base64,
+        },
+      });
+    }
+
+    const systemPrompt = `أنت محلّل كتب مدرسية سعودية. مهمتك: تحليل صور صفحات كتاب (مرتّبة) واستخراج بنية الفصول والدروس.
+
+قواعد:
+- كل فصل له ترويسة واضحة (الفصل ١، ٢، ...)
+- كل درس له عنوان في رأس صفحاته (عادة عريض/ملوّن)
+- رقم الصفحة في أسفل الصفحة (تجاهله — استخدم "صورة الصفحة N" المُرسل)
+- قد توجد صفحات تمهيدية/غلاف/اختبارات (item_type='intro' أو 'test_mid' أو 'test_chapter' أو 'other')
+
+أرجع JSON array، كل عنصر:
+{
+  "item_type": "lesson" | "test_mid" | "test_chapter" | "test_cumulative" | "intro" | "cover" | "teacher" | "other",
+  "chapter_number": رقم الفصل (int، أو null إن غير منطبق),
+  "chapter_title": عنوان الفصل (string),
+  "lesson_title": عنوان الدرس (كامل — لا تقص أرقاماً جزء من العنوان مثل "الأعداد ١٨، ١٩، ٢٠"),
+  "page_start": أول صفحة,
+  "page_end": آخر صفحة,
+  "full_text": "" (فارغ — لا نحتاج نص هنا)
+}
+
+مثال (خيالي): صفحات 1-2 غلاف، 3-8 فصل ١ درس أول، 9-12 فصل ١ درس ثاني، 13 اختبار الفصل.
+[
+  {"item_type":"cover","chapter_number":null,"chapter_title":"","lesson_title":"","page_start":1,"page_end":2,"full_text":""},
+  {"item_type":"lesson","chapter_number":1,"chapter_title":"الأعداد","lesson_title":"العد حتى ١٠","page_start":3,"page_end":8,"full_text":""},
+  {"item_type":"lesson","chapter_number":1,"chapter_title":"الأعداد","lesson_title":"مقارنة الأعداد","page_start":9,"page_end":12,"full_text":""},
+  {"item_type":"test_chapter","chapter_number":1,"chapter_title":"الأعداد","lesson_title":"اختبار الفصل ١","page_start":13,"page_end":13,"full_text":""}
+]`;
+
     try {
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
@@ -222,25 +260,28 @@ async function detectChapters(pageFiles, totalPages) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ role: 'user', parts }],
-            systemInstruction: {
-              parts: [{
-                text: `أنت محلل مناهج سعودية. سأعطيك صور صفحات كتاب بالترتيب (منخفضة الدقة، تكفي لاكتشاف ترويسات الفصول). مهمتك فقط: حدّد أي الصفحات بداية فصل جديد (صفحة عنوان فصل مثل "الفصل N"). أرجع مصفوفة JSON: لكل بداية فصل {chapter_number, chapter_title, page_start}. JSON نقي فقط.`
-              }]
-            },
+            systemInstruction: { parts: [{ text: systemPrompt }] },
             generationConfig: {
               temperature: 0,
-              maxOutputTokens: 4096,
+              maxOutputTokens: 16384,
               responseMimeType: 'application/json',
               responseSchema: {
                 type: 'array',
                 items: {
                   type: 'object',
                   properties: {
-                    chapter_number: { type: 'integer' },
+                    item_type: {
+                      type: 'string',
+                      enum: ['lesson', 'test_mid', 'test_chapter', 'test_cumulative', 'intro', 'cover', 'teacher', 'other'],
+                    },
+                    chapter_number: { type: 'integer', nullable: true },
                     chapter_title: { type: 'string' },
+                    lesson_title: { type: 'string' },
                     page_start: { type: 'integer' },
+                    page_end: { type: 'integer' },
+                    full_text: { type: 'string' },
                   },
-                  required: ['chapter_number', 'chapter_title', 'page_start'],
+                  required: ['item_type', 'page_start', 'page_end', 'full_text'],
                 },
               },
             },
@@ -249,105 +290,74 @@ async function detectChapters(pageFiles, totalPages) {
       );
 
       if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status} ${await response.text()}`);
+        const errText = await response.text();
+        throw new Error(`Gemini API error: ${response.status} ${errText}`);
       }
 
       const data = await response.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
-      // Clean and parse JSON
-      let cleaned = text.trim();
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
-      }
-      const start = cleaned.indexOf('[');
-      const end = cleaned.lastIndexOf(']');
-      if (start !== -1 && end !== -1 && end > start) {
-        cleaned = cleaned.slice(start, end + 1);
-      }
-
-      const chapters = JSON.parse(cleaned);
-      if (Array.isArray(chapters)) {
-        allChapters.push(...chapters);
-        console.log(`    Found ${chapters.length} chapter(s) in this batch`);
+      if (text) {
+        const items = JSON.parse(text);
+        // Filter to lessons only
+        const lessons = items.filter((item) => item.item_type === 'lesson');
+        allChapters.push(...lessons);
+        console.log(`    ✓ Found ${lessons.length} lessons in this batch`);
       }
     } catch (err) {
-      console.error(`    ⚠️ Failed to detect chapters in batch: ${err.message}`);
+      console.error(`  ⚠️ Detection failed for batch ${startPage}-${endPage}: ${err.message}`);
     }
   }
 
-  // Sort by page_start and remove duplicates
-  const uniqueChapters = [];
-  const seen = new Set();
-
-  allChapters
-    .sort((a, b) => a.page_start - b.page_start)
-    .forEach(ch => {
-      const key = `${ch.chapter_number}-${ch.page_start}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        uniqueChapters.push(ch);
-      }
-    });
-
-  // Calculate page_end for each chapter
-  const result = uniqueChapters.map((ch, idx) => ({
-    chapter_number: ch.chapter_number,
-    chapter_title: ch.chapter_title,
-    page_start: ch.page_start,
-    page_end: idx < uniqueChapters.length - 1
-      ? uniqueChapters[idx + 1].page_start - 1
-      : totalPages,
-  }));
-
-  // If first chapter doesn't start at page 1, include introductory pages
-  if (result.length > 0 && result[0].page_start > 1) {
-    result.unshift({
-      chapter_number: 0,
-      chapter_title: 'مقدمة الكتاب',
-      page_start: 1,
-      page_end: result[0].page_start - 1,
-    });
-  }
-
-  console.log(`✅ Detected ${result.length} chapters`);
-  return result;
+  console.log(`✅ Detected ${allChapters.length} total chapters/lessons`);
+  return allChapters;
 }
 
-// ═══ Helper: Process single chapter via ingest-vision ═══
+// Process single chapter via ingest-vision (with retry)
 async function processChapter(payload, retries = 3) {
   const { chapter_number, page_from, page_to } = payload;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
+      console.log(`  🔄 Processing Chapter ${chapter_number} (pages ${page_from}-${page_to}), attempt ${attempt}/${retries}...`);
+
       const response = await fetch(INGEST_VISION_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        const errText = await response.text();
+        throw new Error(`ingest-vision error: ${response.status} ${errText}`);
       }
 
-      const data = await response.json();
-      return {
-        ok: true,
-        chapter_number,
-        lessons_written: data.summary?.lessons_written || 0,
-        chunks_written: data.summary?.chunks_written || 0,
-      };
-    } catch (err) {
-      if (attempt < retries) {
-        const delays = [1000, 3000, 6000]; // 1s, 3s, 6s
-        const delay = delays[attempt - 1] || 1000;
-        console.log(`  ⚠️ Attempt ${attempt} failed for chapter ${chapter_number}, retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+      const result = await response.json();
+
+      if (result.ok) {
+        console.log(`    ✅ Chapter ${chapter_number}: ${result.lessons_written} lessons, ${result.chunks_written} chunks`);
+        return {
+          ok: true,
+          chapter_number,
+          lessons_written: result.lessons_written,
+          chunks_written: result.chunks_written,
+        };
       } else {
+        throw new Error(result.error || 'Unknown error from ingest-vision');
+      }
+    } catch (err) {
+      console.error(`    ⚠️ Attempt ${attempt} failed: ${err.message}`);
+
+      if (attempt < retries) {
+        const delays = [1000, 3000, 6000];
+        const delay = delays[attempt - 1] || 1000;
+        console.log(`    ⏳ Retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        console.error(`    ❌ Chapter ${chapter_number} failed after ${retries} attempts`);
         return {
           ok: false,
           chapter_number,
@@ -358,199 +368,332 @@ async function processChapter(payload, retries = 3) {
   }
 }
 
-// ═══ ROUTE: POST /process-book ═══
-app.post('/process-book', upload.single('file'), async (req, res) => {
-  // Disable timeout for long-running operations
-  req.setTimeout(0);
-  res.setTimeout(0);
+// ═══════════════════════════════════════════════════════════════
+// ASYNC BACKGROUND PROCESSING
+// ═══════════════════════════════════════════════════════════════
 
-  const { subject_id, grade_id, part_number, book_slug } = req.body;
-
-  if (!req.file) {
-    return res.status(400).json({ error: 'PDF file is required' });
-  }
-  if (!subject_id || !part_number || !book_slug) {
-    return res.status(400).json({
-      error: 'Missing required fields: subject_id, part_number, book_slug'
-    });
-  }
-
-  const pdfPath = req.file.path;
-  const tmpDir = path.join(os.tmpdir(), `${book_slug}-${Date.now()}`);
+async function processBookAsync(jobId, pdfPath, meta) {
+  const { subject_id, grade_id, part_number, book_slug } = meta;
 
   try {
-    await fsPromises.mkdir(tmpDir, { recursive: true });
-    console.log(`\n🚀 Processing book: ${book_slug}`);
+    console.log(`🚀 [Job ${jobId}] Starting async processing: ${book_slug}`);
 
-    // 1. Get total pages
+    // (1) Get total pages
     const totalPages = getPdfPageCount(pdfPath);
-    console.log(`📊 Total pages: ${totalPages}`);
-
     if (totalPages === 0) {
-      throw new Error('Could not determine PDF page count');
+      throw new Error('Failed to detect PDF page count');
     }
 
-    // 2. Convert PDF to images (chunked)
-    const { pageFiles } = await convertPdfToImages(pdfPath, tmpDir, totalPages);
+    console.log(`📊 [Job ${jobId}] Total pages: ${totalPages}`);
+    await updateJob(jobId, { total_pages: totalPages });
 
-    if (pageFiles.length === 0) {
-      throw new Error('No pages were successfully converted');
+    // (2) Convert PDF → upload images → create detection images (streamed)
+    const { uploadedPages, detectionImages } = await convertAndUploadPages(
+      pdfPath,
+      totalPages,
+      book_slug,
+      jobId
+    );
+
+    if (uploadedPages.length === 0) {
+      throw new Error('Failed to convert any pages');
     }
 
-    // 3. Upload images to Supabase
-    const { uploaded, failed } = await uploadImages(pageFiles, book_slug);
-
-    if (failed.length > 0 && uploaded === 0) {
-      throw new Error(`Failed to upload any images: ${JSON.stringify(failed)}`);
-    }
-
-    // 4. Detect chapters
-    const chapters = await detectChapters(pageFiles, totalPages);
+    // (3) Detect chapters using compressed images
+    const chapters = await detectChapters(detectionImages, totalPages, jobId);
 
     if (chapters.length === 0) {
       throw new Error('No chapters detected');
     }
 
-    // 5. Process each chapter via ingest-vision (sequential orchestration)
-    console.log(`\n🔄 Processing ${chapters.length} chapters sequentially...`);
-    const chapterResults = [];
+    await updateJob(jobId, { chapters_total: chapters.length });
 
-    for (const ch of chapters) {
-      console.log(`  Processing Chapter ${ch.chapter_number}: "${ch.chapter_title}" (pages ${ch.page_start}-${ch.page_end})...`);
+    // (4) Process chapters sequentially
+    console.log(`🔄 [Job ${jobId}] Processing ${chapters.length} chapters sequentially...`);
+    await updateJob(jobId, {
+      status: 'processing',
+      current_step: 'Processing chapters via ingest-vision...',
+    });
 
-      const result = await processChapter({
+    const results = [];
+    const failedChapters = [];
+
+    for (let i = 0; i < chapters.length; i++) {
+      const chapter = chapters[i];
+      const chapterNum = i + 1; // Sequential numbering
+
+      await updateJob(jobId, {
+        current_step: `Processing Chapter ${chapterNum}: "${chapter.lesson_title}" (pages ${chapter.page_start}-${chapter.page_end})...`,
+      });
+
+      const payload = {
         subject_id,
         grade_id,
-        part_number: parseInt(part_number, 10),
+        part_number,
         book_slug,
-        page_from: ch.page_start,
-        page_to: ch.page_end,
-        chapter_number: ch.chapter_number,
+        page_from: chapter.page_start,
+        page_to: chapter.page_end,
         mode: 'commit',
-      });
+        chapter_number: chapterNum, // Override Gemini's detection
+      };
 
-      chapterResults.push({
-        chapter_number: ch.chapter_number,
-        chapter_title: ch.chapter_title,
-        page_start: ch.page_start,
-        page_end: ch.page_end,
-        ok: result.ok,
-        lessons_written: result.lessons_written,
-        chunks_written: result.chunks_written,
-        error: result.error,
-      });
+      const result = await processChapter(payload);
+      results.push(result);
 
       if (result.ok) {
-        console.log(`    ✅ Processed: ${result.lessons_written} lessons, ${result.chunks_written} chunks`);
+        await updateJob(jobId, { chapters_done: i + 1 });
       } else {
-        console.error(`    ❌ Failed: ${result.error}`);
+        failedChapters.push({
+          chapter_number: chapterNum,
+          page_start: chapter.page_start,
+          page_end: chapter.page_end,
+          error: result.error,
+        });
       }
     }
 
-    // 6. Verify coverage
+    // (5) Check coverage (detect gaps in page ranges)
     const gaps = [];
-    for (let p = 1; p <= totalPages; p++) {
-      const covered = chapters.some(ch => p >= ch.page_start && p <= ch.page_end);
-      if (!covered) gaps.push(p);
+    const sortedChapters = chapters.sort((a, b) => a.page_start - b.page_start);
+
+    for (let i = 0; i < sortedChapters.length - 1; i++) {
+      const currentEnd = sortedChapters[i].page_end;
+      const nextStart = sortedChapters[i + 1].page_start;
+
+      if (nextStart - currentEnd > 1) {
+        gaps.push({
+          page_from: currentEnd + 1,
+          page_to: nextStart - 1,
+        });
+      }
     }
 
-    const failedChapters = chapterResults.filter(r => !r.ok);
-
-    console.log(`\n✅ Book processing complete: ${book_slug}`);
-    console.log(`   Total pages: ${totalPages}`);
-    console.log(`   Pages uploaded: ${uploaded}`);
-    console.log(`   Chapters detected: ${chapters.length}`);
-    console.log(`   Chapters processed: ${chapterResults.filter(r => r.ok).length}`);
-    console.log(`   Failed chapters: ${failedChapters.length}`);
-    console.log(`   Coverage gaps: ${gaps.length} pages`);
-
-    return res.json({
-      ok: true,
+    // (6) Final result
+    const finalResult = {
       book_slug,
       total_pages: totalPages,
-      pages_uploaded: uploaded,
+      pages_uploaded: uploadedPages.length,
       chapters_detected: chapters.length,
-      chapters: chapterResults,
+      chapters: results,
       gaps,
-      failed_chapters: failedChapters.map(ch => ch.chapter_number),
-    });
+      failed_chapters: failedChapters,
+    };
 
+    console.log(`✅ [Job ${jobId}] Book processing complete: ${book_slug}`);
+    console.log(`   - Chapters processed: ${results.filter((r) => r.ok).length}/${chapters.length}`);
+    console.log(`   - Failed chapters: ${failedChapters.length}`);
+    console.log(`   - Gaps: ${gaps.length}`);
+
+    await updateJob(jobId, {
+      status: 'done',
+      current_step: 'Processing complete',
+      result: finalResult,
+    });
   } catch (err) {
-    console.error(`❌ Error processing book: ${err.message}`);
-    return res.status(500).json({ error: err.message });
+    console.error(`❌ [Job ${jobId}] Fatal error: ${err.message}`);
+    await updateJob(jobId, {
+      status: 'failed',
+      error: err.message,
+      current_step: 'Processing failed',
+    });
   } finally {
-    // Cleanup
+    // Cleanup: delete job directory
     try {
-      await fsPromises.rm(tmpDir, { recursive: true, force: true });
-      await fsPromises.unlink(pdfPath);
+      const jobDir = path.dirname(pdfPath);
+      await fsPromises.rm(jobDir, { recursive: true, force: true });
+      console.log(`🗑️ [Job ${jobId}] Cleaned up temp directory`);
     } catch (cleanupErr) {
-      console.error(`⚠️ Cleanup failed: ${cleanupErr.message}`);
+      console.error(`⚠️ [Job ${jobId}] Cleanup failed: ${cleanupErr.message}`);
     }
   }
-});
+}
 
-// ═══ ROUTE: POST /retry ═══
-app.post('/retry', async (req, res) => {
-  // Disable timeout for long-running operations
-  req.setTimeout(0);
-  res.setTimeout(0);
+// ═══════════════════════════════════════════════════════════════
+// ROUTES
+// ═══════════════════════════════════════════════════════════════
 
-  const { subject_id, grade_id, part_number, book_slug, chapters } = req.body;
-
-  if (!subject_id || !part_number || !book_slug || !Array.isArray(chapters)) {
-    return res.status(400).json({
-      error: 'Missing required fields: subject_id, part_number, book_slug, chapters[]'
-    });
-  }
-
-  console.log(`\n🔄 Retrying ${chapters.length} chapters for book: ${book_slug}`);
-
-  const results = [];
-
-  for (const ch of chapters) {
-    console.log(`  Retrying Chapter ${ch.chapter_number} (pages ${ch.page_from}-${ch.page_to})...`);
-
-    const result = await processChapter({
-      subject_id,
-      grade_id,
-      part_number: parseInt(part_number, 10),
-      book_slug,
-      page_from: ch.page_from,
-      page_to: ch.page_to,
-      chapter_number: ch.chapter_number,
-      mode: 'commit',
-    });
-
-    results.push(result);
-
-    if (result.ok) {
-      console.log(`    ✅ Success: ${result.lessons_written} lessons`);
-    } else {
-      console.error(`    ❌ Failed: ${result.error}`);
-    }
-  }
-
-  return res.json({
-    ok: true,
-    book_slug,
-    results,
-    failed: results.filter(r => !r.ok).length,
-  });
-});
-
-// ═══ ROUTE: GET /health ═══
+// Health check
 app.get('/health', (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /process-book - Create job and return immediately
+app.post('/process-book', upload.single('file'), async (req, res) => {
+  // Disable timeout for large file uploads
+  req.setTimeout(0);
+  res.setTimeout(0);
+
+  try {
+    const { subject_id, grade_id, part_number, book_slug } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: 'No file uploaded' });
+    }
+
+    if (!subject_id || !grade_id || !part_number || !book_slug) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Missing required fields: subject_id, grade_id, part_number, book_slug',
+      });
+    }
+
+    const pdfPath = req.file.path;
+
+    // Create job in database
+    const { data: job, error: jobErr } = await supabase
+      .from('ingestion_jobs')
+      .insert({
+        book_slug,
+        subject_id,
+        grade_id,
+        part_number: parseInt(part_number, 10),
+        status: 'queued',
+      })
+      .select()
+      .single();
+
+    if (jobErr || !job) {
+      return res.status(500).json({ ok: false, error: 'Failed to create job', details: jobErr });
+    }
+
+    console.log(`📥 [Job ${job.id}] Created: ${book_slug} (${req.file.size} bytes)`);
+
+    // Start async processing (non-blocking)
+    setImmediate(() => {
+      processBookAsync(job.id, pdfPath, {
+        subject_id,
+        grade_id,
+        part_number: parseInt(part_number, 10),
+        book_slug,
+      });
+    });
+
+    // Return immediately (client polls /job/:id for status)
+    res.json({
+      ok: true,
+      job_id: job.id,
+      status: 'queued',
+      message: 'Job created. Poll GET /job/:id for status.',
+    });
+  } catch (err) {
+    console.error('Error in /process-book:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /job/:id - Poll job status
+app.get('/job/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: job, error } = await supabase
+      .from('ingestion_jobs')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error || !job) {
+      return res.status(404).json({ ok: false, error: 'Job not found' });
+    }
+
+    res.json({
+      ok: true,
+      job_id: job.id,
+      book_slug: job.book_slug,
+      status: job.status,
+      total_pages: job.total_pages,
+      pages_uploaded: job.pages_uploaded,
+      chapters_total: job.chapters_total,
+      chapters_done: job.chapters_done,
+      current_step: job.current_step,
+      error: job.error,
+      result: job.result,
+      created_at: job.created_at,
+      updated_at: job.updated_at,
+    });
+  } catch (err) {
+    console.error('Error in /job/:id:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /jobs - List recent jobs (for admin panel)
+app.get('/jobs', async (req, res) => {
+  try {
+    const { data: jobs, error } = await supabase
+      .from('ingestion_jobs')
+      .select('id, book_slug, status, total_pages, chapters_total, chapters_done, created_at, updated_at')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+
+    res.json({ ok: true, jobs });
+  } catch (err) {
+    console.error('Error in /jobs:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /retry - Retry failed chapters (kept for compatibility)
+app.post('/retry', async (req, res) => {
+  req.setTimeout(0);
+  res.setTimeout(0);
+
+  try {
+    const { subject_id, grade_id, part_number, book_slug, chapters } = req.body;
+
+    if (!chapters || !Array.isArray(chapters) || chapters.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Missing or empty chapters array' });
+    }
+
+    console.log(`🔄 Retrying ${chapters.length} chapters for ${book_slug}`);
+
+    const results = [];
+    let failedCount = 0;
+
+    for (const chapter of chapters) {
+      const { chapter_number, page_from, page_to } = chapter;
+
+      const payload = {
+        subject_id,
+        grade_id,
+        part_number,
+        book_slug,
+        page_from,
+        page_to,
+        mode: 'commit',
+        chapter_number,
+      };
+
+      const result = await processChapter(payload);
+      results.push(result);
+
+      if (!result.ok) {
+        failedCount++;
+      }
+    }
+
+    res.json({
+      ok: true,
+      book_slug,
+      results,
+      failed: failedCount,
+    });
+  } catch (err) {
+    console.error('Error in /retry:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ═══ Start server ═══
 app.listen(PORT, () => {
-  console.log(`\n🚀 PDF Worker listening on port ${PORT}`);
-  console.log(`   SUPABASE_URL: ${SUPABASE_URL}`);
-  console.log(`   INGEST_VISION_URL: ${INGEST_VISION_URL}`);
-  console.log(`   ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}`);
-  console.log(`   Render density: ${RENDER_DENSITY}`);
-  console.log(`   Convert chunk size: ${CONVERT_CHUNK}`);
-  console.log(`   Detect batch size: ${DETECT_BATCH}`);
-  console.log(`\n✅ Ready to process books\n`);
+  console.log(`✅ Mizan PDF Worker running on port ${PORT}`);
+  console.log(`   - Health: GET /health`);
+  console.log(`   - Process: POST /process-book (returns job_id immediately)`);
+  console.log(`   - Poll: GET /job/:id`);
+  console.log(`   - List: GET /jobs`);
+  console.log(`   - Retry: POST /retry`);
 });
