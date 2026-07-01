@@ -38,20 +38,32 @@ export default function WorldScreen() {
   const load = useCallback(async () => {
     if (!childId) return;
     setLoading(true);
-    const [balance, streak, petsCat, worldCat, fam] = await Promise.all([
-      getGemBalance(childId),
-      getStreak(childId),
-      getPetsCatalog(),
-      getWorldCatalog(),
-      getFamilyChallenge(childId),
-    ]);
-    setGems(balance);
-    setWeather(streak.weather);
-    setStreakDays(streak.current);
-    setPets(petsCat);
-    setWorldItems(worldCat);
-    setChallenge(fam);
-    setLoading(false);
+    try {
+      const [balance, streak, petsCat, worldCat, fam] = await Promise.all([
+        getGemBalance(childId),
+        getStreak(childId),
+        getPetsCatalog(),
+        getWorldCatalog(),
+        getFamilyChallenge(childId),
+      ]);
+      setGems(balance);
+      setWeather(streak.weather);
+      setStreakDays(streak.current);
+      setPets(petsCat);
+      setWorldItems(worldCat);
+      setChallenge(fam);
+    } catch (error) {
+      console.error('[عالمي] تحميل:', error);
+      // حالة آمنة افتراضية عند الفشل
+      setGems(0);
+      setWeather('cloudy');
+      setStreakDays(0);
+      setPets([]);
+      setWorldItems([]);
+      setChallenge(null);
+    } finally {
+      setLoading(false);
+    }
   }, [childId]);
 
   useFocusEffect(

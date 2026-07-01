@@ -26,6 +26,7 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
@@ -632,7 +633,12 @@ export default function LessonScreen() {
   }
 
   return (
-    <View style={s.flex}>
+    <LinearGradient
+      colors={[theme.colors.backgroundDay || theme.colors.background, '#E8F4FD', '#FFF3E0']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={{ flex: 1 }}
+    >
       {/* رأس بسيط: رجوع + اسم حكيم */}
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
@@ -781,7 +787,7 @@ export default function LessonScreen() {
           </View>
         )
       )}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -803,15 +809,19 @@ const s = StyleSheet.create({
     gap: 10,
     paddingHorizontal: theme.spacing.md,
     paddingBottom: 12,
-    backgroundColor: theme.colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 0,
+    shadowColor: theme.colors.primary,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.gold + '44',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -823,7 +833,7 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.accent + '33',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -831,7 +841,7 @@ const s = StyleSheet.create({
 
   // منطقة حكيم الثابتة
   hakeemFixed: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.md,
     paddingTop: 18,
@@ -863,10 +873,12 @@ const s = StyleSheet.create({
   bubble: {
     alignSelf: 'stretch',
     backgroundColor: theme.colors.card,
-    borderRadius: theme.radius.xl,
-    borderWidth: 2.5,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: theme.colors.gold,
     paddingVertical: 18,
     paddingHorizontal: 20,
+    shadowColor: theme.colors.accent,
     shadowOpacity: 0.22,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
@@ -894,7 +906,7 @@ const s = StyleSheet.create({
 
   // التذييل
   footer: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: 'transparent',
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     paddingTop: 14,
@@ -908,7 +920,8 @@ const s = StyleSheet.create({
     minWidth: 90,
     backgroundColor: theme.colors.card,
     borderWidth: 2,
-    borderRadius: theme.radius.lg,
+    borderColor: theme.colors.success,
+    borderRadius: 20,
     paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: 'center',
