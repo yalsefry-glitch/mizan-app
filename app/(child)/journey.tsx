@@ -43,11 +43,34 @@ export default function JourneyScreen() {
 
   useEffect(() => {
     (async () => {
-      // جلب الدروس الجاهزة (processed) مرتّبة حسب part_number ثم lesson_order، مصفّاة حسب المادّة.
+      setLoading(true);
+
+      // بوّابة الاكتمال: أي أجزاء هذه المادّة مكتملة 100% (coverage_complete=true) في book_status؟
+      let completeParts: number[] = [];
+      if (subjectId && subjectId !== '') {
+        const { data: statusData } = await supabase
+          .from('book_status')
+          .select('part_number')
+          .eq('subject_id', subjectId)
+          .eq('coverage_complete', true);
+        completeParts = ((statusData as { part_number: number }[] | null) ?? [])
+          .map((r) => r.part_number)
+          .filter((p): p is number => typeof p === 'number');
+      }
+
+      // حالة الفراغ: لا جزء مكتمل → لا محطّات (تُعرض شاشة «قيد التجهيز»).
+      if (completeParts.length === 0) {
+        setStations([]);
+        setLoading(false);
+        return;
+      }
+
+      // جلب الدروس الجاهزة (processed) للأجزاء المكتملة فقط، مرتّبة حسب part_number ثم lesson_order.
       let query = supabase
         .from('lessons')
         .select('*')
-        .eq('status', 'processed');
+        .eq('status', 'processed')
+        .in('part_number', completeParts);
 
       // تصفية حسب subject_id إن وُجد (UUID)
       if (subjectId && subjectId !== '') {
@@ -110,6 +133,16 @@ export default function JourneyScreen() {
     );
   }
 
+  // بوّابة الاكتمال: لا محطّات (لا جزء مكتمل بعد) → شاشة تجهيز ودودة.
+  if (stations.length === 0) {
+    return (
+      <View style={s.center}>
+        <Text style={s.emptyIcon}>🪐</Text>
+        <Text style={s.emptyText}>دروس هذا الكوكب قيد التجهيز... عد قريباً!</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={s.flex} contentContainerStyle={{ paddingTop: 54, paddingBottom: 40 }}>
       <Text style={s.title}>رحلة التعلّم</Text>
@@ -159,6 +192,15 @@ export default function JourneyScreen() {
 const s = StyleSheet.create({
   flex: { flex: 1, backgroundColor: theme.colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background },
+  emptyIcon: { fontSize: 64, textAlign: 'center', marginBottom: 14 },
+  emptyText: {
+    fontFamily: theme.fonts.bodyBold,
+    fontSize: 17,
+    color: theme.colors.textBody,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+    lineHeight: 28,
+  },
   title: { fontFamily: theme.fonts.heading, fontSize: 22, color: theme.colors.textDark, textAlign: 'center', marginBottom: 10 },
   station: {
     position: 'absolute',

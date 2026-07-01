@@ -83,14 +83,31 @@ export default function HomeScreen() {
           subjectRows = (subjectData as Pick<Subject, 'id' | 'name' | 'subject_key'>[] | null) ?? [];
         }
 
+        // المواد التي لها كتاب مكتمل 100% (coverage_complete=true) في book_status.
+        // بوّابة صارمة: لا تُعرض مادّة للطفل ما لم يكتمل كتابها بالكامل.
+        const completeSubjectIds = new Set<string>();
+        if (subjectRows.length > 0) {
+          const subjectIds = subjectRows.map((sub) => sub.id);
+          const { data: statusData } = await supabase
+            .from('book_status')
+            .select('subject_id')
+            .in('subject_id', subjectIds)
+            .eq('coverage_complete', true);
+          for (const row of (statusData as { subject_id: string }[] | null) ?? []) {
+            completeSubjectIds.add(row.subject_id);
+          }
+        }
+
         if (!active) return;
 
-        // دمج hakeems مع subjects حسب subject_key
+        // دمج hakeems مع subjects — فقط للمواد التي لها كتاب مكتمل
         const merged: HakeemCard[] = [];
         for (const h of hakeemRows) {
           const matchedSubject = subjectRows.find(s => s.subject_key === h.key);
+          // شرط صارم: لا نعرض بطاقة حكيم لمادة بلا كتاب مكتمل
+          if (!matchedSubject || !completeSubjectIds.has(matchedSubject.id)) continue;
           merged.push({
-            subjectId: matchedSubject?.id || '', // UUID أو فارغ للاحتياط
+            subjectId: matchedSubject.id,
             subjectKey: h.key,
             name: h.name_ar,
             emoji: h.emoji ?? '✨',

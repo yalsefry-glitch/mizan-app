@@ -53,6 +53,16 @@ const DETECT_DENSITY = 50; // Low DPI for chapter detection
 const DETECT_JPEG_QUALITY = 40; // Compressed detection images
 const DETECT_BATCH = 15; // Pages per Gemini detection call
 
+// ═══ Book status / reconciliation ═══
+const SUPABASE_REST = `${SUPABASE_URL}/rest/v1`;
+const bookHeaders = {
+  apikey: SUPABASE_SERVICE_ROLE_KEY,
+  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+  'Content-Type': 'application/json',
+};
+const MAX_RECONCILE_ATTEMPTS = 15;
+const RECONCILE_TOKEN = process.env.RECONCILE_TOKEN || '';
+
 // ═══ Express app ═══
 const app = express();
 
@@ -484,9 +494,9 @@ async function processBookAsync(jobId, pdfPath, meta) {
       }
     }
 
-    // (5) Check coverage: page gaps (for reference)
+    // (5) Page gaps (informational only)
     const gaps = [];
-    const sortedChapters = [...chapters].sort((a, b) => a.page_start - b.page_start); // FIXED: copy, no mutation
+    const sortedChapters = [...chapters].sort((a, b) => a.page_start - b.page_start); // copy, no mutation
 
     for (let i = 0; i < sortedChapters.length - 1; i++) {
       const currentEnd = sortedChapters[i].page_end;
@@ -500,95 +510,119 @@ async function processBookAsync(jobId, pdfPath, meta) {
       }
     }
 
-    // (6) FIXED: Real DB-coverage verification (fetch written chapters from database)
-    console.log(`🔍 [Job ${jobId}] Verifying actual DB coverage...`);
-    let chaptersWrittenInDb = 0;
-    let writtenChapterNumbers = new Set();
-    let missingChapters = [];
-    let coverageComplete = false;
-
-    try {
-      const dbRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/lessons?subject_id=eq.${subject_id}&part_number=eq.${part_number}&select=chapter_number`,
-        {
-          headers: {
-            apikey: SUPABASE_SERVICE_ROLE_KEY,
-            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          },
-        }
-      );
-
-      if (dbRes.ok) {
-        const dbLessons = await dbRes.json();
-        chaptersWrittenInDb = dbLessons.length;
-        writtenChapterNumbers = new Set(dbLessons.map((l) => l.chapter_number));
-
-        // Find missing chapters (1..chapters.length not in DB)
-        for (let chNum = 1; chNum <= chapters.length; chNum++) {
-          if (!writtenChapterNumbers.has(chNum)) {
-            const chapterData = chapters[chNum - 1];
-            missingChapters.push({
-              chapter_number: chNum,
-              page_start: chapterData.page_start,
-              page_end: chapterData.page_end,
-              lesson_title: chapterData.lesson_title,
-            });
-          }
-        }
-
-        coverageComplete = missingChapters.length === 0;
-        console.log(`   - DB chapters written: ${chaptersWrittenInDb}`);
-        console.log(`   - Missing chapters: ${missingChapters.length}`);
-        console.log(`   - Coverage complete: ${coverageComplete}`);
-      } else {
-        console.error(`   ⚠️ Failed to fetch DB lessons: ${dbRes.status}`);
-      }
-    } catch (dbErr) {
-      console.error(`   ⚠️ DB verification error: ${dbErr.message}`);
-    }
-
-    // Store detected chapters for /complete-book endpoint
-    const detectedChapters = chapters.map((ch, idx) => ({
-      chapter_number: idx + 1,
+    // (6) Locked desired state + page-based coverage (reconciliation model).
+    // Desired state = detected lessons keyed by page_start. Locked on first ingest so it
+    // never drifts across repeated 503 retries — this guarantees convergence.
+    const detectedLessons = chapters.map((ch, i) => ({
       page_start: ch.page_start,
       page_end: ch.page_end,
-      lesson_title: ch.lesson_title,
+      chapter_number: i + 1,
+      title: ch.lesson_title || ch.chapter_title || '',
     }));
 
-    // (7) Final result with honest metrics
+    // (6a) Read (or create) the locked book_status row. Never overwrite detected_lessons.
+    let lockedDetected = detectedLessons;
+    try {
+      const statusRes = await fetch(
+        `${SUPABASE_REST}/book_status?subject_id=eq.${subject_id}&part_number=eq.${part_number}&select=detected_lessons`,
+        { headers: bookHeaders }
+      );
+      const statusRows = statusRes.ok ? await statusRes.json() : [];
+
+      if (!statusRows.length) {
+        // First ingest → create the locked desired state.
+        await fetch(`${SUPABASE_REST}/book_status`, {
+          method: 'POST',
+          headers: bookHeaders,
+          body: JSON.stringify({
+            subject_id,
+            grade_id,
+            part_number,
+            book_slug,
+            detected_lessons: detectedLessons,
+            total_lessons_detected: detectedLessons.length,
+            status: 'processing',
+          }),
+        });
+        lockedDetected = detectedLessons;
+      } else {
+        // Already locked → keep the original desired state (ensures convergence).
+        lockedDetected = statusRows[0].detected_lessons || detectedLessons;
+      }
+    } catch (statusErr) {
+      console.error(`   ⚠️ book_status lock read/create failed: ${statusErr.message}`);
+    }
+
+    // (6b) Page-based coverage: which desired page_starts already exist in lessons?
+    let writtenSet = new Set();
+    try {
+      const writtenRes = await fetch(
+        `${SUPABASE_REST}/lessons?subject_id=eq.${subject_id}&part_number=eq.${part_number}&select=page_start`,
+        { headers: bookHeaders }
+      );
+      const writtenRows = writtenRes.ok ? await writtenRes.json() : [];
+      writtenSet = new Set(writtenRows.map((r) => r.page_start));
+    } catch (writtenErr) {
+      console.error(`   ⚠️ Failed to read written lessons: ${writtenErr.message}`);
+    }
+
+    const missingLessons = lockedDetected.filter((l) => !writtenSet.has(l.page_start));
+    const coverageComplete = missingLessons.length === 0;
+    const lessonsWritten = lockedDetected.length - missingLessons.length;
+
+    console.log(
+      `🔍 [Job ${jobId}] Page-based coverage: ${lessonsWritten}/${lockedDetected.length} written, ` +
+      `${missingLessons.length} missing, complete=${coverageComplete}`
+    );
+
+    // (6c) Update book_status — never touch detected_lessons (the lock).
+    try {
+      await fetch(
+        `${SUPABASE_REST}/book_status?subject_id=eq.${subject_id}&part_number=eq.${part_number}`,
+        {
+          method: 'PATCH',
+          headers: bookHeaders,
+          body: JSON.stringify({
+            lessons_written: lessonsWritten,
+            missing_lessons: missingLessons,
+            coverage_complete: coverageComplete,
+            status: coverageComplete ? 'complete' : 'processing',
+            last_checked_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }),
+        }
+      );
+    } catch (patchErr) {
+      console.error(`   ⚠️ book_status PATCH failed: ${patchErr.message}`);
+    }
+
+    // (7) Final job result (honest, page-based).
     const finalResult = {
       book_slug,
       total_pages: totalPages,
       pages_uploaded: uploadedPages.length,
-      chapters_detected: chapters.length,
-      chapters_written_in_db: chaptersWrittenInDb,
+      lessons_detected: lockedDetected.length,
+      lessons_written: lessonsWritten,
+      missing_lessons: missingLessons,
       coverage_complete: coverageComplete,
-      missing_chapters: missingChapters,
-      detected_chapters: detectedChapters, // Store for /complete-book
-      chapters: results, // Per-chapter attempt results
-      gaps, // Page gaps (informational)
-      failed_chapters: failedChapters, // Deprecated (use missing_chapters)
+      chapters: results, // per-chapter attempt results
+      gaps, // page gaps (informational)
+      failed_chapters: failedChapters, // informational
     };
 
-    // (8) Honest status: done only if coverage is complete OR at least some written
-    let finalStatus = 'done';
-    if (chaptersWrittenInDb === 0) {
-      finalStatus = 'failed'; // Total failure
-    } else if (!coverageComplete) {
-      finalStatus = 'done'; // Partial success (client shows warning)
-    }
+    // (8) Honest job status: done if complete OR partial; failed only if nothing written.
+    const finalStatus = coverageComplete ? 'done' : (lessonsWritten > 0 ? 'done' : 'failed');
 
     console.log(`✅ [Job ${jobId}] Book processing ${finalStatus}: ${book_slug}`);
-    console.log(`   - Chapters processed (attempts): ${results.filter((r) => r.ok).length}/${chapters.length}`);
-    console.log(`   - Chapters in DB (actual): ${chaptersWrittenInDb}/${chapters.length}`);
-    console.log(`   - Missing chapters: ${missingChapters.length}`);
+    console.log(`   - Lessons written (DB, page-based): ${lessonsWritten}/${lockedDetected.length}`);
+    console.log(`   - Missing lessons: ${missingLessons.length}`);
     console.log(`   - Coverage complete: ${coverageComplete}`);
     console.log(`   - Page gaps: ${gaps.length}`);
 
     await updateJob(jobId, {
       status: finalStatus,
-      current_step: coverageComplete ? 'Processing complete' : `Incomplete: ${missingChapters.length} chapters missing`,
-      chapters_done: chaptersWrittenInDb, // FIXED: Real DB count
+      current_step: coverageComplete ? 'Processing complete' : `Incomplete: ${missingLessons.length} lessons missing`,
+      chapters_done: lessonsWritten,
       result: finalResult,
     });
   } catch (err) {
@@ -790,145 +824,142 @@ app.post('/retry', async (req, res) => {
   }
 });
 
-// POST /complete-book - Self-healing: complete missing chapters automatically
-app.post('/complete-book', async (req, res) => {
+// POST /reconcile - Self-healer: drive every incomplete book to its locked desired state.
+// Body (optional) { subject_id, part_number } → single book; otherwise all incomplete books.
+app.post('/reconcile', async (req, res) => {
+  // Optional shared-secret guard (set RECONCILE_TOKEN in env to enable).
+  if (RECONCILE_TOKEN && req.get('x-reconcile-token') !== RECONCILE_TOKEN) {
+    return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  }
+
   req.setTimeout(0);
   res.setTimeout(0);
 
+  // Read the set of written page_starts for one book.
+  async function readWrittenSet(subjectId, partNumber) {
+    const r = await fetch(
+      `${SUPABASE_REST}/lessons?subject_id=eq.${subjectId}&part_number=eq.${partNumber}&select=page_start`,
+      { headers: bookHeaders }
+    );
+    const rows = r.ok ? await r.json() : [];
+    return new Set(rows.map((x) => x.page_start));
+  }
+
   try {
-    const { subject_id, grade_id, part_number, book_slug } = req.body;
+    const body = req.body || {};
 
-    if (!subject_id || !grade_id || !part_number || !book_slug) {
-      return res.status(400).json({
-        ok: false,
-        error: 'Missing required fields: subject_id, grade_id, part_number, book_slug',
-      });
+    // (1) Pick target books.
+    let books = [];
+    if (body.subject_id && body.part_number != null) {
+      const oneRes = await fetch(
+        `${SUPABASE_REST}/book_status?subject_id=eq.${body.subject_id}&part_number=eq.${body.part_number}&select=*`,
+        { headers: bookHeaders }
+      );
+      books = oneRes.ok ? await oneRes.json() : [];
+    } else {
+      const allRes = await fetch(
+        `${SUPABASE_REST}/book_status?coverage_complete=eq.false&status=neq.needs_attention&select=*`,
+        { headers: bookHeaders }
+      );
+      books = allRes.ok ? await allRes.json() : [];
     }
 
-    console.log(`🔧 [Complete] Self-healing ${book_slug}...`);
-
-    // (1) Fetch latest job to get detected_chapters
-    const { data: latestJob, error: jobErr } = await supabase
-      .from('ingestion_jobs')
-      .select('id, result')
-      .eq('book_slug', book_slug)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (jobErr || !latestJob || !latestJob.result?.detected_chapters) {
-      return res.status(404).json({
-        ok: false,
-        error: 'No previous job found or detected_chapters missing. Run /process-book first.',
-      });
-    }
-
-    const detectedChapters = latestJob.result.detected_chapters;
-    console.log(`   - Found ${detectedChapters.length} detected chapters from job ${latestJob.id}`);
-
-    // (2) Fetch written chapters from DB
-    const dbRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/lessons?subject_id=eq.${subject_id}&part_number=eq.${part_number}&select=chapter_number`,
-      {
-        headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-      }
-    );
-
-    if (!dbRes.ok) {
-      return res.status(500).json({ ok: false, error: 'Failed to fetch DB lessons' });
-    }
-
-    const dbLessons = await dbRes.json();
-    const writtenChapterNumbers = new Set(dbLessons.map((l) => l.chapter_number));
-    console.log(`   - Found ${dbLessons.length} chapters already written in DB`);
-
-    // (3) Calculate missing chapters
-    const missingChapters = detectedChapters.filter((ch) => !writtenChapterNumbers.has(ch.chapter_number));
-
-    if (missingChapters.length === 0) {
-      return res.json({
-        ok: true,
-        book_slug,
-        message: 'All chapters already complete',
-        coverage_complete: true,
-        chapters_total: detectedChapters.length,
-        chapters_written: dbLessons.length,
-        missing: [],
-      });
-    }
-
-    console.log(`   - Processing ${missingChapters.length} missing chapters...`);
-
-    // (4) Process missing chapters with 503-aware retry
     const completed = [];
-    const stillMissing = [];
+    const stillIncomplete = [];
+    const needsAttention = [];
 
-    for (const chapter of missingChapters) {
-      const payload = {
-        subject_id,
-        grade_id,
-        part_number,
-        book_slug,
-        page_from: chapter.page_start,
-        page_to: chapter.page_end,
-        mode: 'commit',
-        chapter_number: chapter.chapter_number,
+    // (2) Reconcile each book toward its locked desired state.
+    for (const book of books) {
+      const lockedDetected = book.detected_lessons || [];
+      const now = () => new Date().toISOString();
+
+      let writtenSet = await readWrittenSet(book.subject_id, book.part_number);
+      const missing = lockedDetected.filter((l) => !writtenSet.has(l.page_start));
+
+      // Already complete → mark and move on.
+      if (missing.length === 0) {
+        await fetch(
+          `${SUPABASE_REST}/book_status?subject_id=eq.${book.subject_id}&part_number=eq.${book.part_number}`,
+          {
+            method: 'PATCH',
+            headers: bookHeaders,
+            body: JSON.stringify({
+              coverage_complete: true,
+              status: 'complete',
+              lessons_written: lockedDetected.length,
+              missing_lessons: [],
+              last_checked_at: now(),
+              updated_at: now(),
+            }),
+          }
+        );
+        completed.push({ subject_id: book.subject_id, part_number: book.part_number, book_slug: book.book_slug });
+        continue;
+      }
+
+      // Reprocess each missing lesson (ingest-vision UPSERT is idempotent).
+      for (const l of missing) {
+        await processChapter({
+          subject_id: book.subject_id,
+          grade_id: book.grade_id,
+          part_number: book.part_number,
+          book_slug: book.book_slug,
+          page_from: l.page_start,
+          page_to: l.page_end,
+          mode: 'commit',
+          chapter_number: l.chapter_number,
+        });
+      }
+
+      // Re-read and recompute coverage.
+      writtenSet = await readWrittenSet(book.subject_id, book.part_number);
+      const missing2 = lockedDetected.filter((l) => !writtenSet.has(l.page_start));
+      const coverageComplete2 = missing2.length === 0;
+      const lessonsWritten2 = lockedDetected.length - missing2.length;
+      const attempts2 = (book.reconcile_attempts || 0) + 1;
+      const newStatus = coverageComplete2
+        ? 'complete'
+        : (attempts2 >= MAX_RECONCILE_ATTEMPTS ? 'needs_attention' : 'processing');
+
+      await fetch(
+        `${SUPABASE_REST}/book_status?subject_id=eq.${book.subject_id}&part_number=eq.${book.part_number}`,
+        {
+          method: 'PATCH',
+          headers: bookHeaders,
+          body: JSON.stringify({
+            lessons_written: lessonsWritten2,
+            missing_lessons: missing2,
+            coverage_complete: coverageComplete2,
+            reconcile_attempts: attempts2,
+            status: newStatus,
+            last_checked_at: now(),
+            updated_at: now(),
+          }),
+        }
+      );
+
+      const entry = {
+        subject_id: book.subject_id,
+        part_number: book.part_number,
+        book_slug: book.book_slug,
+        lessons_written: lessonsWritten2,
+        missing: missing2.length,
+        attempts: attempts2,
       };
-
-      const result = await processChapter(payload);
-
-      if (result.ok) {
-        completed.push({
-          chapter_number: chapter.chapter_number,
-          lessons_written: result.lessons_written,
-          chunks_written: result.chunks_written,
-        });
-      } else {
-        stillMissing.push({
-          chapter_number: chapter.chapter_number,
-          page_start: chapter.page_start,
-          page_end: chapter.page_end,
-          error: result.error,
-        });
-      }
+      if (coverageComplete2) completed.push(entry);
+      else if (newStatus === 'needs_attention') needsAttention.push(entry);
+      else stillIncomplete.push(entry);
     }
-
-    // (5) Re-verify coverage
-    const dbRes2 = await fetch(
-      `${SUPABASE_URL}/rest/v1/lessons?subject_id=eq.${subject_id}&part_number=eq.${part_number}&select=chapter_number`,
-      {
-        headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-      }
-    );
-
-    let finalWritten = dbLessons.length;
-    let coverageComplete = false;
-
-    if (dbRes2.ok) {
-      const finalLessons = await dbRes2.json();
-      finalWritten = finalLessons.length;
-      coverageComplete = finalWritten === detectedChapters.length;
-    }
-
-    console.log(`✅ [Complete] Finished: ${completed.length} completed, ${stillMissing.length} still missing`);
 
     res.json({
       ok: true,
-      book_slug,
-      chapters_total: detectedChapters.length,
-      chapters_written: finalWritten,
-      coverage_complete: coverageComplete,
+      books_processed: books.length,
       completed,
-      still_missing: stillMissing,
+      still_incomplete: stillIncomplete,
+      needs_attention: needsAttention,
     });
   } catch (err) {
-    console.error('Error in /complete-book:', err);
+    console.error('Error in /reconcile:', err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
@@ -941,5 +972,5 @@ app.listen(PORT, () => {
   console.log(`   - Poll: GET /job/:id`);
   console.log(`   - List: GET /jobs`);
   console.log(`   - Retry: POST /retry`);
-  console.log(`   - Complete: POST /complete-book (self-healing for missing chapters)`);
+  console.log(`   - Reconcile: POST /reconcile (self-healer → locked desired state)`);
 });

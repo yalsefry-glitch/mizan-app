@@ -1,0 +1,19 @@
+name: reconcile-books
+
+# يشغّل المُصلِّح الذاتي دورياً حتى تكتمل كل الكتب 100% (503 اليوم يُعاد لاحقاً).
+on:
+  schedule:
+    - cron: '*/30 * * * *' # كل 30 دقيقة
+  workflow_dispatch: {}
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /reconcile on pdf-worker
+        run: |
+          curl -X POST https://mizan-app-k58l.onrender.com/reconcile \
+            -H "x-reconcile-token: ${{ secrets.RECONCILE_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            --max-time 300
