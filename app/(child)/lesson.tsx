@@ -67,24 +67,16 @@ const SUBJECT_COLORS: Record<string, string> = {
   creative: '#EC4899',
 };
 
-// تحويل Blob (صوت MP3 راجع من دالة tts) إلى رابط بيانات صالح لمشغّل expo-audio.
-function blobToAudioUri(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result;
-      if (typeof result !== 'string') {
-        reject(new Error('فشل قراءة الصوت'));
-        return;
-      }
-      // result يأتي بصيغة data:application/octet-stream;base64,XXXX
-      // نثبّت نوع MP3 صراحةً ليتعرّف عليه المشغّل.
-      const base64 = result.includes(',') ? result.slice(result.indexOf(',') + 1) : result;
-      resolve(`data:audio/mpeg;base64,${base64}`);
-    };
-    reader.onerror = () => reject(reader.error ?? new Error('فشل قراءة الصوت'));
-    reader.readAsDataURL(blob);
-  });
+// ===== تحويل ArrayBuffer إلى base64 بطريقة chunked آمنة =====
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 8192;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
 }
 
 // ===== مؤشّر الاستماع: أمواج صوتية متحرّكة (equalizer) =====
@@ -306,12 +298,16 @@ export default function LessonScreen() {
         const { data, error } = await supabase.functions.invoke('tts', {
           body: { text, gender: voiceGender },
         });
-        if (error || !(data instanceof Blob)) {
+        if (error || !data) {
           console.error('[حكيم] tts:', error?.message, (error as any)?.status);
           throw error ?? new Error('لا يوجد صوت');
         }
 
-        const uri = await blobToAudioUri(data);
+        // في React Native، data يأتي كـ ArrayBuffer (لا Blob)
+        const arrayBuffer = data instanceof ArrayBuffer ? data : data;
+        const base64 = arrayBufferToBase64(arrayBuffer);
+        const uri = `data:audio/mpeg;base64,${base64}`;
+
         try {
           await setAudioModeAsync({
             playsInSilentMode: true,
