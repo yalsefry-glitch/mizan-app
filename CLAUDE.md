@@ -1,3 +1,131 @@
+# 🦉 عالم حكيم — الحالة الحالية (محدّث 2026-07-01)
+
+> **اقرأ هذا القسم أولاً — هو أحدث حالة للمشروع.** الأقسام الأقدم أسفله تبقى مرجعاً للفلسفة والبنية، لكن حيث تتعارض، **هذا القسم هو الأصحّ**.
+
+---
+
+## ⚙️ تصحيح جوهريّ: الذكاء = Gemini (لا Anthropic)
+
+كل دوال الذكاء تستخدم **Google Gemini** فعلياً في الكود:
+- النموذج: `gemini-2.5-flash` (لا gemini-2.0-flash-exp القديم)
+- التضمينات: `gemini-embedding-001` بأبعاد **768** (إلزاميّ — جدول lesson_chunks فيه vector(768) + ivfflat)
+- الأقسام القديمة التي تقول «Anthropic/Claude» أو «text-embedding-004» **قديمة، تُتجاهَل**.
+
+---
+
+## 🌐 خدمة pdf-worker على Render — منشورة وحيّة (نمط async)
+
+خدمة Node.js مُحاويَة (Docker) تحوّل PDF الكتب لصور، تكتشف الفصول بـGemini، وتستوعبها — **آلياً من رفعة واحدة**. تُشغّل من لوحة التحكّم مستقبلاً.
+
+- **المجلّد:** `services/pdf-worker/` | **الرابط:** https://mizan-app-k58l.onrender.com
+- **Service ID:** srv-d9209ji8qa3s73e0rf20 | Docker | Root Directory `services/pdf-worker` | الخطّة **Starter** ($7/mo، 0.5 CPU، 512MB)
+- **الصحّة:** `GET /health` → `{"ok":true}`
+
+**المسارات:**
+- `POST /process-book` — يستقبل PDF + subject_id, grade_id, part_number, book_slug. ينشئ job، يبدأ المعالجة خلفياً (setImmediate)، **يردّ فوراً** بـjob_id. (يحلّ حدّ Render 100 ثانية للموازن.)
+- `GET /job/:id` — الحالة الحيّة (status, total_pages, pages_uploaded, chapters_total, chapters_done, current_step, error, result). اللوحة تستطلعها كل 5 ثوان.
+- `GET /jobs` — قائمة آخر jobs.
+- `POST /retry` — إعادة معالجة فصول محدّدة.
+- `POST /complete-book` — **إكمال ذاتيّ**: يجد الفصول الناقصة ويعيدها فقط.
+
+**5 متغيّرات بيئة في Render:** SUPABASE_URL (بلا /rest/v1/)، INGEST_VISION_URL (=`.../functions/v1/ingest-vision`)، SUPABASE_SERVICE_ROLE_KEY، GEMINI_API_KEY، ALLOWED_ORIGIN=*.
+
+**9 تحصينات:** async job pattern، تدفّق convert→upload→delete بالدفعات (CONVERT_CHUNK=3، يمنع OOM على 512MB)، استطلاع حيّ، صور كشف مضغوطة (sharp 600px JPEG 40، DETECT_BATCH=15)، setTimeout(0)، retry واعٍ بـ503، كتابة buffer، حزمة `ws` (Node 20 يحتاجها لـSupabase realtime).
+
+---
+
+## 🧠 ingest-vision — نهج 2026 (فصل كامل في استدعاء واحد)
+
+`supabase/functions/ingest-vision/index.ts`. تُرسل **صور فصل كامل** لـgemini-2.5-flash في **استدعاء واحد** فيحدّد Gemini حدود الدروس بنفسه (الاستدعاء لكل صفحة كان مجزّأً وفاشلاً). responseSchema مفروض؛ chapter_number ممرّر من الخارج (لا من Gemini).
+
+**عقد الردّ في وضع commit (مهمّ جداً):**
+```
+{ mode:'commit', committed:true, summary:{lessons_written, chunks_written, ...}, items:[...] }
+```
+لا يوجد حقل `ok` ولا `lessons_written` في الجذر. أي كود يقرأ هذا الردّ **يجب** أن يفحص `committed===true` ويقرأ `summary.lessons_written` (لا `result.ok`).
+
+---
+
+## 🗄️ جداول القاعدة الفعلية (أسماء الأعمدة الحقيقية — لا تخمين)
+
+**lessons:** id, subject_id, title (عنوان الدرس — **ليس** lesson_title), file_path, content_text, status, created_at, page_start, page_end, part_number, lesson_order, chapter_number, chapter_title, lesson_type. **لا يوجد book_slug** — الكتاب يُميّز بـ**subject_id + part_number**.
+
+**lesson_chunks:** id, lesson_id, subject, grade_order, chunk_index, content, embedding vector(768), created_at, page_number, part_number, page_image_url.
+
+**ingestion_jobs** (أُعيد بناؤه نظيفاً 2026-06-30): id, book_slug, subject_id, grade_id, part_number, status (queued|converting|detecting|processing|done|failed), total_pages, pages_uploaded, chapters_total, chapters_done, current_step, error, result(jsonb), created_at, updated_at.
+
+⚠️ محرّر Supabase SQL على الجوّال يفشل مع DO-blocks/$$/أسطر متعدّدة (تلف الاقتباسات) → «syntax error at or near )». استخدم أوامر SQL بسطر واحد بلا DO blocks.
+
+**buckets:** homework(خاص), books(عام — PDFs), books-compressed, lesson_pages(عام — صور {book_slug}/page-NNN.png 3-digit).
+
+---
+
+## ✅ حالة الاستيعاب (مثبتة)
+
+- **math-grade1-part1** (137 صفحة، 6 فصول): مستوعب.
+- **math-grade1-part2** (155 صفحة): مستوعب **44/48 فصلاً** + 80 chunks، بلا تكرار في chapter_number. **4 فصول ناقصة (12,13,14,15)** فشلت بـ**Gemini 503** (ازدحام خوادم Google المؤقّت، ليس عطل الكود).
+- **معرّفات math-grade1:** subject_id (الرياضيات) `cbb340d9-ae4b-4de5-89b0-5572c3a9524d`، grade_id (الصف الأول) `26ba396e-f8bc-4842-b7e4-a85ff3312ec5`.
+
+**عيوب جودة معروفة (ثانوية، لاحقاً):** عناوين مكرّرة أحياناً («استعمال النقود» مرّتين)، عناوين مبتورة أحياناً («الأعداد حتى» بلا رقم) — من استخراج Gemini.
+
+---
+
+## 🎯 الحلّ الدائم قيد البناء: ضمان اكتمال الكتب (لا ترقيع)
+
+القرار: لا كتاب «يُنهى» ناقصاً بصمت، وأي نقص يُكمَل حتماً مهما تكرّر 503. أربع ركائز:
+
+1. **تحقّق التغطية بالصفحات** (لا بأرقام الفصول فقط): الفصل «مكتوب» فقط إذا وُجد في القاعدة درس بنفس نطاق صفحاته — فلا تُخدَع بدروس قديمة.
+2. **حالة كتاب مستمرّة**: الكتاب لا يصير «مكتمل» إلا حين كل فصوله المكتشفة موجودة بصفحاتها في القاعدة.
+3. **إكمال حتميّ دوريّ عبر GitHub Actions** (مجّاني، قرار المالك): مهمّة مجدولة تمرّ على الكتب غير المكتملة، تعيد فصولها الناقصة، **حتى تكتمل 100%**. 503 اليوم يُعاد غداً — لا استسلام.
+4. **التطبيق لا يعرض كتاباً للأطفال إلا إذا مكتمل 100%** — الطفل لا يرى كتاباً ناقصاً أبداً.
+
+**مطبّق حتى الآن (commit ~8143386 + التالي):** إصلاح عقد processChapter (committed/summary)، retry واعٍ بـ503 (تأخير أطول 15/45/90s للـ503، 1/3/6s لغيره، 4 محاولات)، تحقّق تغطية من القاعدة، status صادق، chapters_done = العدد الحقيقيّ من القاعدة، endpoint /complete-book، إصلاح mutation في sort. **يتبقّى:** تحقّق بالصفحات (لا الأرقام)، جدول حالة الكتب، GitHub Actions للإكمال الدوريّ.
+
+---
+
+## 🗣️ تصميم صوت حكيم ومخاطبته (مقرّر — يُبنى مع حكيم)
+
+حقلان **منفصلان** في ملفّ الطفل:
+- `voice_preference` (male/female): **الطفل يختار** صوت حكيم (في setup-children/settings)، يقود صوت ElevenLabs في tts (male `t9akNmCDhz230CEXOYmn` / female `kdUY91gH5xyDHapxlthT`) بغضّ النظر عن جنس الطفل.
+- `gender` (boy/girl): جنس الطفل **الحقيقيّ**، يقود **المخاطبة النحوية العربية** في tutor-chat (ولد → «يا بطل/أحسنتَ»، بنت → «يا بطلة/أحسنتِ») — يُمرّر لـGemini في التعليمات.
+- مستقلّان: بنت قد تختار صوت الولد لكن تُخاطَ بصيغة مؤنّثة. حكيم شخصية بوم واحدة؛ يتغيّر فقط صوت النطق وصيغة الخطاب.
+
+**حماية حكيم من 503 (ضروريّ، يُبنى مع tutor-chat):** 3 طبقات — (1) retry صامت واعٍ بـ503 (تأخير قصير 1/2/4s قبل أن يشعر الطفل)، (2) احتياطي نموذج gemini-2.5-flash-lite عند 503 مستمرّ (يتعافى 5-15 دقيقة)، (3) رسالة حكيم ودودة كآخر حلّ («لحظة صغيرة يا بطل، فكّر معي وأعِد سؤالك») — لا خطأ تقنيّ مخيف. (منفصل عن إكمال الاستيعاب: الاستخراج = إعادة حتى النجاح؛ المحادثة الحيّة = تعافٍ لطيف فوريّ.)
+
+---
+
+## 💳 منطق الاشتراك (مقرّر): الخيار 3 — لا مجّاني
+
+لا محتوى مجّاني، تصفّح فقط. غير المشترك يرى الرئيسية والمواد وعناوين الدروس (تصفّح)؛ فتح **أيّ درس** → Paywall («اشترك لتبدأ التعلّم»)؛ لا محتوى تعليميّ (دروس/سبورة/حكيم/فيديو) بلا اشتراك. الدفع عبر **المتجر فقط** (Google Play / App Store IAP، RevenueCat) — لا بوّابة خارجية. حالة الاشتراك تُعكس في جدول subscriptions. lesson.tsx يفحص الاشتراك قبل تحميل المحتوى → توجيه لـPaywall إن لم يكن مشتركاً.
+
+---
+
+## 🖥️ السبورة التفاعلية (مبنية، مثبتة)
+
+`components/InteractiveCanvas.tsx` (267 سطراً): تعرض **صورة الصفحة الأصلية** (تطابق الكتاب 100%)، حكيم يشير عليها بـSkia بإحداثيات من Gemini Vision. Skia 2.6.2 + Reanimated 4.3.1 + gesture-handler 2.31.1. tsc نظيف. **يتبقّى:** ربطها في lesson.tsx تبويب [📄 الصفحة].
+
+---
+
+## 🔭 الخطّة المتبقّية (بالترتيب)
+
+**(A)** إنهاء الحلّ الدائم للاستيعاب (تحقّق بالصفحات + جدول حالة الكتب + GitHub Actions الدوريّ) → إكمال part2 (الفصول 12-15) → أتمتة الـ36 كتاباً (6 مواد × 3 صفوف × جزآن).
+**(B)** لوحة التحكّم الويب على Render (منفصلة عن التطبيق): رفع كتب، حالة حيّة (/job/:id)، إصلاح ذاتيّ (/complete-book, /retry)، مراجعة محتوى، اشتراكات، مستفيدون، **وضع صيانة** (app_config.maintenance_mode → التطبيق يعرض شاشة صيانة؛ حساب المالك يتجاوز)، **مساعد صيانة ذكيّ** (فحوص دورية، إصلاح ذاتيّ للمعروف، تقارير عربية بـGemini)، دعم متعدّد التطبيقات.
+**(C)** ربط InteractiveCanvas في lesson.tsx.
+**(D)** حكيم يحلّل الصفحة بـGemini Vision → إحداثيات → تظليل. **(E)** طبقة الفيديو (4 طبقات أمان). **(F)** بريد توثيق يوميّ 3ص بتوقيت السعودية عبر GitHub Actions. **(G)** تنظيف مسار pdftotext القديم. **(H)** تغيير PIN من 9999؛ استبدال quiz.tsx بلعبة؛ اختبار على جهاز حقيقيّ (لم يُختبَر قطّ)؛ ثم APK واحد (بإذن صريح فقط).
+
+---
+
+## ⚠️ بيئات التطوير
+
+1. **Termux (أندرويد):** ~/mizan-app، Claude Code **v2.0.30** (لا تحدّثه — الإصدارات الأحدث أسقطت دعم linux-arm64-android؛ ثبّته بـ`npm install -g @anthropic-ai/claude-code@2.0.30 --allow-scripts=@anthropic-ai/claude-code`). git+node، لا Supabase CLI، لا .env. نشر الدوال عبر Management API بـSUPABASE_ACCESS_TOKEN.
+2. **Codespace** supreme-guacamole: node v24، supabase 2.108.0، deno، poppler/ghostscript، .env هنا فقط.
+3. **PC العمل:** D:\mizan-app، Claude Code v2.1.196.
+
+**تشغيل:** الأوامر العربية في الطرفية تُخطئ — العربيّ لأوامر Claude Code فقط، الطرفية أوامر إنجليزية قصيرة. الروابط قيم تُلصق في Render/الكود، لا تُفتح في المتصفّح.
+
+**مشروع Render قديم للحذف:** "promotion" (yalsefry-glitch/promotion, srv-d8o7asbsq97s73f9dm30) — منفصل عن mizan-app، الحذف مؤجّل.
+
+
 # عالم حكيم — ملف المشروع الكامل (Project Memory)
 
 > هذا الملف هو المرجع الكامل لمشروع «عالم حكيم». اقرأه بالكامل قبل أي عمل.
