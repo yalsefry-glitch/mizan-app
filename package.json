@@ -23,6 +23,7 @@
     "expo-auth-session": "~56.0.14",
     "expo-clipboard": "~56.0.4",
     "expo-constants": "~56.0.18",
+    "expo-dev-client": "~56.0.21",
     "expo-document-picker": "^56.0.4",
     "expo-font": "~56.0.7",
     "expo-image": "~56.0.11",
@@ -55,5 +56,8 @@
   },
   "devDependencies": {
     "sharp": "^0.35.2"
+  },
+  "allowScripts": {
+    "@shopify/react-native-skia@2.6.2": true
   }
 }

@@ -36,16 +36,17 @@ export default function JourneyMap({ stations, width }: JourneyMapProps) {
   });
 
   // بناء مسار Skia منحنٍ يصل المحطّات.
-  const path = Skia.Path.Make();
+  const builder = Skia.PathBuilder.Make();
   positions.forEach((pt, i) => {
     if (i === 0) {
-      path.moveTo(pt.x, pt.y);
+      builder.moveTo(pt.x, pt.y);
     } else {
       const prev = positions[i - 1];
       const midY = (prev.y + pt.y) / 2;
-      path.cubicTo(prev.x, midY, pt.x, midY, pt.x, pt.y);
+      builder.cubicTo(prev.x, midY, pt.x, midY, pt.x, pt.y);
     }
   });
+  const path = builder.build();
 
   return (
     <View style={{ width: screenW, height: totalH }}>

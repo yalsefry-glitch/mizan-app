@@ -100,15 +100,16 @@ export default function JourneyScreen() {
   });
 
   // مسار Skia يصل المحطّات.
-  const path = Skia.Path.Make();
+  const builder = Skia.PathBuilder.Make();
   positions.forEach((pt, i) => {
-    if (i === 0) path.moveTo(pt.x, pt.y);
+    if (i === 0) builder.moveTo(pt.x, pt.y);
     else {
       const prev = positions[i - 1];
       const midY = (prev.y + pt.y) / 2;
-      path.cubicTo(prev.x, midY, pt.x, midY, pt.x, pt.y);
+      builder.cubicTo(prev.x, midY, pt.x, midY, pt.x, pt.y);
     }
   });
+  const path = builder.build();
 
   const totalH = stations.length * V_GAP + 80;
 
